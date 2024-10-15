@@ -6,7 +6,7 @@ import (
 )
 
 type KnucklesDB struct {
-	mutex sync.RWMutex
+	mutex sync.Mutex
 	tlb   map[string]*DBvalues
 }
 
@@ -17,8 +17,8 @@ func NewKnucklesDB() *KnucklesDB {
 }
 
 func (k *KnucklesDB) SetWithIpAddressOnly(address string, values *DBvalues) (err error) {
+	k.mutex.Lock()
 	defer k.mutex.Unlock()
-	k.mutex.Unlock()
 
 	_, ok := k.tlb[address]
 
@@ -31,8 +31,8 @@ func (k *KnucklesDB) SetWithIpAddressOnly(address string, values *DBvalues) (err
 }
 
 func (k *KnucklesDB) SetWithEndpointOnly(endpoint string, values *DBvalues) (err error) {
-	defer k.mutex.Unlock()
 	k.mutex.Lock()
+	defer k.mutex.Unlock()
 
 	_, ok := k.tlb[endpoint]
 	if ok {
@@ -44,8 +44,8 @@ func (k *KnucklesDB) SetWithEndpointOnly(endpoint string, values *DBvalues) (err
 }
 
 func (k *KnucklesDB) SearchWithIpOnly(addres string) (values *DBvalues, err error) {
-	defer k.mutex.RLocker().Unlock()
-	k.mutex.RLocker().Lock()
+	k.mutex.Lock()
+	defer k.mutex.Unlock()
 
 	_, ok := k.tlb[addres]
 	if !ok {
@@ -57,8 +57,8 @@ func (k *KnucklesDB) SearchWithIpOnly(addres string) (values *DBvalues, err erro
 }
 
 func (k *KnucklesDB) SearchWithEndpointOnly(enpoint string) (values *DBvalues, err error) {
-	defer k.mutex.RLocker().Unlock()
-	k.mutex.RLocker().Lock()
+	k.mutex.Lock()
+	defer k.mutex.Unlock()
 
 	_, ok := k.tlb[enpoint]
 	if !ok {
