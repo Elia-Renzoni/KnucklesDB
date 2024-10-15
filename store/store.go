@@ -1,31 +1,71 @@
 package store
 
-import "sync"
+import (
+	"errors"
+	"sync"
+)
 
 type KnucklesDB struct {
-	lock sync.RWMutex
-	tlb  map[string]DBvalues
+	mutex sync.RWMutex
+	tlb   map[string]*DBvalues
 }
 
 func NewKnucklesDB() *KnucklesDB {
 	return &KnucklesDB{
-		tlb: make(map[string]DBvalues),
+		tlb: make(map[string]*DBvalues),
 	}
 }
 
-func (k *KnucklesDB) SetWithIpAddressOnly(address string) (err error) {
+func (k *KnucklesDB) SetWithIpAddressOnly(address string, values *DBvalues) (err error) {
+	defer k.mutex.Unlock()
+	k.mutex.Unlock()
+
+	_, ok := k.tlb[address]
+
+	if ok {
+		return errors.New("...")
+	}
+
+	k.tlb[address] = values
 	return
 }
 
-func (k *KnucklesDB) SetWithEndpointOnly(endpoint string) (err error) {
+func (k *KnucklesDB) SetWithEndpointOnly(endpoint string, values *DBvalues) (err error) {
+	defer k.mutex.Unlock()
+	k.mutex.Lock()
+
+	_, ok := k.tlb[endpoint]
+	if ok {
+		return errors.New("...")
+	}
+
+	k.tlb[endpoint] = values
 	return
 }
 
-func (k *KnucklesDB) SearchWithIpOnly(addres string) (err error) {
+func (k *KnucklesDB) SearchWithIpOnly(addres string) (values *DBvalues, err error) {
+	defer k.mutex.RLocker().Unlock()
+	k.mutex.RLocker().Lock()
+
+	_, ok := k.tlb[addres]
+	if !ok {
+		return nil, errors.New("...")
+	}
+
+	values = k.tlb[addres]
 	return
 }
 
-func (k *KnucklesDB) SearchWithEndpointOnly(enpoint string) (err error) {
+func (k *KnucklesDB) SearchWithEndpointOnly(enpoint string) (values *DBvalues, err error) {
+	defer k.mutex.RLocker().Unlock()
+	k.mutex.RLocker().Lock()
+
+	_, ok := k.tlb[enpoint]
+	if !ok {
+		return nil, errors.New("...")
+	}
+
+	values = k.tlb[enpoint]
 	return
 }
 
