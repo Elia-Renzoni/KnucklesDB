@@ -6,13 +6,11 @@ import (
 
 type DetectionBST struct {
 	root *TreeNode
-	levels int
 }
 
 func NewDectionBST() *DetectionBST {
 	return &DetectionBST{
 		root: nil,
-		levels: 0,
 	}
 }
 
@@ -101,8 +99,4 @@ func (d *DetectionBST) Remove(nodeId string, clock int16) {
 			}
 		}
 	}
-}
-
-func (d *DetectionBST) GetDLevels() int {
-	return d.levels
 }
