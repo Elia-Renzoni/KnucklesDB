@@ -7,12 +7,12 @@ import (
 
 type KnucklesDB struct {
 	mutex sync.Mutex
-	tlb   map[string]*DBvalues
+	LRUCache   map[string]*DBvalues
 }
 
 func NewKnucklesDB() *KnucklesDB {
 	return &KnucklesDB{
-		tlb: make(map[string]*DBvalues),
+		LRUCache: make(map[string]*DBvalues),
 	}
 }
 
@@ -20,13 +20,13 @@ func (k *KnucklesDB) SetWithIpAddressOnly(address string, values *DBvalues) (err
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
 
-	_, ok := k.tlb[address]
+	_, ok := k.LRUCache[address]
 
 	if ok {
 		return errors.New("...")
 	}
 
-	k.tlb[address] = values
+	k.LRUCache[address] = values
 	return
 }
 
@@ -34,12 +34,12 @@ func (k *KnucklesDB) SetWithEndpointOnly(endpoint string, values *DBvalues) (err
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
 
-	_, ok := k.tlb[endpoint]
+	_, ok := k.LRUCache[endpoint]
 	if ok {
 		return errors.New("...")
 	}
 
-	k.tlb[endpoint] = values
+	k.LRUCache[endpoint] = values
 	return
 }
 
@@ -47,12 +47,12 @@ func (k *KnucklesDB) SearchWithIpOnly(addres string) (values *DBvalues, err erro
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
 
-	_, ok := k.tlb[addres]
+	_, ok := k.LRUCache[addres]
 	if !ok {
 		return nil, errors.New("...")
 	}
 
-	values = k.tlb[addres]
+	values = k.LRUCache[addres]
 	return
 }
 
@@ -60,12 +60,12 @@ func (k *KnucklesDB) SearchWithEndpointOnly(enpoint string) (values *DBvalues, e
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
 
-	_, ok := k.tlb[enpoint]
+	_, ok := k.LRUCache[enpoint]
 	if !ok {
 		return nil, errors.New("...")
 	}
 
-	values = k.tlb[enpoint]
+	values = k.LRUCache[enpoint]
 	return
 }
 

@@ -9,14 +9,11 @@ type DetectionBST struct {
 	levels int
 }
 
-var detectionT *DetectionBST
-
 func NewDectionBST() *DetectionBST {
-	detectionT = &DetectionBST{
+	return &DetectionBST{
 		root: nil,
 		levels: 0,
 	}
-	return detectionT
 }
 
 func (d *DetectionBST) Insert(nodeId string, clock int16) {
