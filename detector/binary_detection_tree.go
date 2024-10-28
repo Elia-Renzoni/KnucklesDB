@@ -9,11 +9,14 @@ type DetectionBST struct {
 	levels int
 }
 
+var detectionT *DetectionBST
+
 func NewDectionBST() *DetectionBST {
-	return &DetectionBST{
+	detectionT = &DetectionBST{
 		root: nil,
 		levels: 0,
 	}
+	return detectionT
 }
 
 func (d *DetectionBST) Insert(nodeId string, clock int16) {
@@ -41,6 +44,63 @@ func (d *DetectionBST) Insert(nodeId string, clock int16) {
 				parent.left = newNode
 			} else {
 				parent.right = newNode
+			}
+		}
+	}
+}
+
+func (d *DetectionBST) Remove(nodeId string, clock int16) {
+	var (
+		node *TreeNode = d.root
+		parent *TreeNode = d.root
+		sub *TreeNode
+	)
+
+	for node != nil && node.value.nodeId != nodeId {
+		parent = node
+		if clock < node.value.clock {
+			node = node.left
+		} else {
+			node = node.right
+		}
+	}
+
+	if node != nil {
+		if node.left == nil {
+			if node == d.root {
+				d.root = node.right
+			} else {
+				if clock < parent.value.logicalClock {
+					parent.left = node.left
+				} else {
+					parent.right = node.right
+				}
+			}
+		} else {
+			if node.right == nil {
+				if node == d.root {
+					d.root = node.left
+				} else {
+					if clock < parent.value.logicalClock {
+						parent.left = node.left
+					} else {
+						parent.right = node.left
+					}
+				}
+			} else {
+				sub = node
+				parent = sub
+				node = sub.left
+				for node != nil {
+					parent = node
+					node = node.right
+				}
+				sub.value.nodeId = node.value.nodeId
+				if parent == sub {
+					parent.left = node.left
+				} else {
+					parent.right = node.left
+				}
 			}
 		}
 	}

@@ -8,13 +8,13 @@ const estimateFaultPeriod int16 = 10
 
 type FailureDetector struct {
 	detectorTree *DetectionBST
-	faultyNodes chan <-string
+	faultyNodes chan <-NodeValues
 }
 
 func NewFailureDetector(tree *DetectionBST) *FailureDetector {
 	return &FailureDetector{
 		detectorTree: tree,
-		faultyNodes: make(chan <-string)
+		faultyNodes: make(chan <-NodeValues)
 	}
 }
 
@@ -28,26 +28,25 @@ func (f *FailureDetector) FaultDetection() {
 
 	// binary search 
 	for {
-		if node := binarySearch(f.detectorTree.root, sloppyClock) node != nil {
-			f.faultyNodes <- node.value.nodeId
+		if node := searchNode(f.detectorTree.root, sloppyClock) node != nil {
+			f.faultyNodes <- node.value
 			continue
-		} else {
-			break
 		}
+		break
 	} 
 
 	close(f.faultyNodes)
 
-	go removeFaultyNodes(f.detectorTree.root, f.faultyNodes)
+	go removeFaultyNodes(f.detectorTree, f.faultyNodes)
 }
 
-func removeFaultyNodes(root *TreeNode, faultyNodes chan<-string) {
+func removeFaultyNodes(tree *DetectionBST, faultyNodes chan<-NodeValues) {
 	for node := range faultyNodes {
-		// TODO
+		tree.Remove(node.nodeId, node.logicalClock)
 	}
 }
 
-func binarySearch(root *TreeNode, key int16) *TreeNode {
+func searchNode(root *TreeNode, key int16) *TreeNode {
 	var node *TreeNode = root
 
 	for node != nil && node.values.logicalClock > key {
