@@ -3,6 +3,7 @@ package store
 import (
 	"errors"
 	"sync"
+	"net"
 )
 
 type KnucklesDB struct {
@@ -20,10 +21,16 @@ func (k *KnucklesDB) SetWithIpAddressOnly(address string, values *DBvalues) (err
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
 
+	_, check := address.(net.IP) 
+	if !check {
+		return errors.New("The Value is Not an IP Address")
+
+	}
+
 	_, ok := k.LRUCache[address]
 
 	if ok {
-		return errors.New("...")
+		return errors.New("The IP Address Already Exist")
 	}
 
 	k.LRUCache[address] = values
@@ -36,7 +43,7 @@ func (k *KnucklesDB) SetWithEndpointOnly(endpoint string, values *DBvalues) (err
 
 	_, ok := k.LRUCache[endpoint]
 	if ok {
-		return errors.New("...")
+		return errors.New("The Endpoint Already Exist")
 	}
 
 	k.LRUCache[endpoint] = values
@@ -47,9 +54,14 @@ func (k *KnucklesDB) SearchWithIpOnly(addres string) (values *DBvalues, err erro
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
 
+	_, check := addres.(net.IP)
+	if !check {
+		return errors.New("The Value is Not an IP Address")
+	}
+
 	_, ok := k.LRUCache[addres]
 	if !ok {
-		return nil, errors.New("...")
+		return nil, errors.New("Not Found")
 	}
 
 	values = k.LRUCache[addres]
@@ -62,7 +74,7 @@ func (k *KnucklesDB) SearchWithEndpointOnly(enpoint string) (values *DBvalues, e
 
 	_, ok := k.LRUCache[enpoint]
 	if !ok {
-		return nil, errors.New("...")
+		return nil, errors.New("Not Found")
 	}
 
 	values = k.LRUCache[enpoint]
@@ -70,5 +82,14 @@ func (k *KnucklesDB) SearchWithEndpointOnly(enpoint string) (values *DBvalues, e
 }
 
 func (k *KnucklesDB) DeleteEntry(entryID string) (err error) {
+	k.mutex.Lock()
+	defer k.mutex.Unlock()
+
+	_, ok := k.LRUCache[entryID]
+	if !ok {
+		return errors.New("Not Found")
+	}
+
+	delete(k.LRUCache, entryID)
 	return
 }
