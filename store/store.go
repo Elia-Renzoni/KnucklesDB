@@ -11,6 +11,7 @@ type KnucklesDB struct {
 	LRUCache   map[string]*DBvalues
 }
 
+
 func NewKnucklesDB() *KnucklesDB {
 	return &KnucklesDB{
 		LRUCache: make(map[string]*DBvalues),
@@ -92,4 +93,26 @@ func (k *KnucklesDB) DeleteEntry(entryID string) (err error) {
 
 	delete(k.LRUCache, entryID)
 	return
+}
+
+type NodePairs struct {
+	nodeID string
+	clock int16
+}
+
+type entries []NodePairs
+
+func (k *KnucklesDB) ReturnEntries() *entries {
+	k.mutex.Lock()
+	defer k.mutex.Unlock()
+
+	var pairs = make(entries, 0)
+
+	for key, value := range k.LRUCache {
+		pairs = append(pairs, NodePairs{
+			nodeID: key,
+			clock: value.logicalClock,
+		})
+	}
+	return pairs
 }
