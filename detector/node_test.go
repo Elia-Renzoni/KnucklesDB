@@ -5,7 +5,7 @@ import (
 )
 
 func TestNode(t *testing.T) {
-	node := NewTreeNode("", 44, nil, nil)
+	node := detector.NewTreeNode("", 44, nil, nil)
 	if node == nil {
 		t.Fail()
 	}

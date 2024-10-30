@@ -22,10 +22,8 @@ func (k *KnucklesDB) SetWithIpAddressOnly(address string, values *DBvalues) (err
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
 
-	_, check := address.(net.IP) 
-	if !check {
-		return errors.New("The Value is Not an IP Address")
-
+	if ip := net.ParseIP(address); ip == nil {
+		return errors.New("Invalid IP Address")
 	}
 
 	_, ok := k.LRUCache[address]
@@ -51,21 +49,20 @@ func (k *KnucklesDB) SetWithEndpointOnly(endpoint string, values *DBvalues) (err
 	return
 }
 
-func (k *KnucklesDB) SearchWithIpOnly(addres string) (values *DBvalues, err error) {
+func (k *KnucklesDB) SearchWithIpOnly(address string) (values *DBvalues, err error) {
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
 
-	_, check := addres.(net.IP)
-	if !check {
-		return errors.New("The Value is Not an IP Address")
+	if ip := net.ParseIP(address); ip == nil {
+		return nil, errors.New("Invalid IP Address")
 	}
 
-	_, ok := k.LRUCache[addres]
+	_, ok := k.LRUCache[address]
 	if !ok {
 		return nil, errors.New("Not Found")
 	}
 
-	values = k.LRUCache[addres]
+	values = k.LRUCache[address]
 	return
 }
 
@@ -102,7 +99,7 @@ type NodePairs struct {
 
 type entries []NodePairs
 
-func (k *KnucklesDB) ReturnEntries() *entries {
+func (k *KnucklesDB) ReturnEntries() entries {
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
 
