@@ -9,13 +9,13 @@ import (
 
 type KnucklesDB struct {
 	mutex sync.Mutex
-	LRUCache   map[string]*DBvalues
+	cache   map[string]*DBvalues
 }
 
 
 func NewKnucklesDB() *KnucklesDB {
 	return &KnucklesDB{
-		LRUCache: make(map[string]*DBvalues),
+		cache: make(map[string]*DBvalues),
 	}
 }
 
@@ -27,13 +27,13 @@ func (k *KnucklesDB) SetWithIpAddressOnly(address string, values *DBvalues) (err
 		return errors.New("Invalid IP Address")
 	}
 
-	_, ok := k.LRUCache[address]
+	_, ok := k.cache[address]
 
 	if ok {
 		return errors.New("The IP Address Already Exist")
 	}
 
-	k.LRUCache[address] = values
+	k.cache[address] = values
 	return
 }
 
@@ -45,12 +45,12 @@ func (k *KnucklesDB) SetWithEndpointOnly(endpoint string, values *DBvalues) (err
 		return errors.New("Invalid Endpoint")
 	}
 	
-	_, ok := k.LRUCache[endpoint]
+	_, ok := k.cache[endpoint]
 	if ok {
 		return errors.New("The Endpoint Already Exist")
 	}
 
-	k.LRUCache[endpoint] = values
+	k.cache[endpoint] = values
 	return
 }
 
@@ -62,12 +62,12 @@ func (k *KnucklesDB) SearchWithIpOnly(address string) (values *DBvalues, err err
 		return nil, errors.New("Invalid IP Address")
 	}
 
-	_, ok := k.LRUCache[address]
+	_, ok := k.cache[address]
 	if !ok {
 		return nil, errors.New("Not Found")
 	}
 
-	values = k.LRUCache[address]
+	values = k.cache[address]
 	return
 }
 
@@ -79,25 +79,25 @@ func (k *KnucklesDB) SearchWithEndpointOnly(endpoint string) (values *DBvalues, 
 		return nil, errors.New("Invalid Endpoint")
 	} 
 
-	_, ok := k.LRUCache[endpoint]
+	_, ok := k.cache[endpoint]
 	if !ok {
 		return nil, errors.New("Not Found")
 	}
 
-	values = k.LRUCache[endpoint]
+	values = k.cache[endpoint]
 	return
 }
 
-func (k *KnucklesDB) DeleteEntry(entryID string) (err error) {
+func (k *KnucklesDB) Eviction(entryID string) (err error) {
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
 
-	_, ok := k.LRUCache[entryID]
+	_, ok := k.cache[entryID]
 	if !ok {
 		return errors.New("Not Found")
 	}
 
-	delete(k.LRUCache, entryID)
+	delete(k.cache, entryID)
 	return
 }
 
@@ -114,7 +114,7 @@ func (k *KnucklesDB) ReturnEntries() entries {
 
 	var pairs = make(entries, 0)
 
-	for key, value := range k.LRUCache {
+	for key, value := range k.cache {
 		pairs = append(pairs, NodePairs{
 			nodeID: key,
 			clock: value.logicalClock,
