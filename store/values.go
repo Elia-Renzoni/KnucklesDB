@@ -9,8 +9,7 @@ type DBvalues struct {
 	endpoint     string
 }
 
-func NewDBValues(ipAddress net.IP, port int,
-	clock int16, endpoint string) *DBvalues {
+func NewDBValues(ipAddress net.IP, port int, clock int16, endpoint string) *DBvalues {
 	return &DBvalues{
 		ipAddress:    ipAddress,
 		port:         port,

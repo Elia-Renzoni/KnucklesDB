@@ -4,6 +4,7 @@ import (
 	"errors"
 	"sync"
 	"net"
+	"strings"
 )
 
 type KnucklesDB struct {
@@ -40,6 +41,10 @@ func (k *KnucklesDB) SetWithEndpointOnly(endpoint string, values *DBvalues) (err
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
 
+	if endpointPrefix := strings.HasPrefix(endpoint, "/"); !endpointPrefix {
+		return errors.New("Invalid Endpoint")
+	}
+	
 	_, ok := k.LRUCache[endpoint]
 	if ok {
 		return errors.New("The Endpoint Already Exist")
@@ -66,16 +71,20 @@ func (k *KnucklesDB) SearchWithIpOnly(address string) (values *DBvalues, err err
 	return
 }
 
-func (k *KnucklesDB) SearchWithEndpointOnly(enpoint string) (values *DBvalues, err error) {
+func (k *KnucklesDB) SearchWithEndpointOnly(endpoint string) (values *DBvalues, err error) {
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
 
-	_, ok := k.LRUCache[enpoint]
+	if endpointPrefix := strings.HasPrefix(endpoint, "/"); !endpointPrefix {
+		return nil, errors.New("Invalid Endpoint")
+	} 
+
+	_, ok := k.LRUCache[endpoint]
 	if !ok {
 		return nil, errors.New("Not Found")
 	}
 
-	values = k.LRUCache[enpoint]
+	values = k.LRUCache[endpoint]
 	return
 }
 

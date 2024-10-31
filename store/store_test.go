@@ -53,3 +53,27 @@ func TestGetWithEndpointOnly(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestReturnEntries(t *testing.T) {
+	ip := net.IPv4(13, 66, 77, 00)
+	endpoint := "/update"
+	ip2 := net.IPv4(55, 66, 44, 22)
+	endpoint2 := "/remove"
+
+	valuesIP1 := store.NewDBValues(ip, 8080, 30, "")
+	vluesIP2 := store.NewDBValues(ip2, 8089, 23, "")
+	valuesEndpoint1 := store.NewDBValues(nil, 7070, 2, endpoint)
+	valuesEndpoint2 := store.NewDBValues(nil, 4040, 21, endpoint2)
+
+	storeInstance := store.NewKnucklesDB()
+	storeInstance.SetWithIpAddressOnly(ip.String(), valuesIP1)
+	storeInstance.SetWithIpAddressOnly(ip2.String(), vluesIP2)
+	storeInstance.SetWithEndpointOnly(endpoint, valuesEndpoint1)
+	storeInstance.SetWithEndpointOnly(endpoint2, valuesEndpoint2)
+	
+	entries := storeInstance.ReturnEntries()
+
+	if len(entries) <= 0 {
+		t.Fail()
+	}
+}
