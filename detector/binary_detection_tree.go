@@ -1,16 +1,34 @@
 package detector
 
-import (
-	"knucklesdb/detector"
-)
-
 type DetectionBST struct {
 	root *TreeNode
+}
+
+type TreeNode struct {
+	value NodeValues
+	left *TreeNode
+	right *TreeNode
+}
+
+type NodeValues struct {
+	nodeId string
+	logicalClock int16
 }
 
 func NewDectionBST() *DetectionBST {
 	return &DetectionBST{
 		root: nil,
+	}
+}
+
+func newTreeNode(id string, clock int16, left, right *TreeNode) *TreeNode {
+	return &TreeNode{
+		value: NodeValues{
+			nodeId: id,
+			logicalClock: clock,
+		},
+		left: left,
+		right: right,
 	}
 }
 
@@ -31,7 +49,7 @@ func (d *DetectionBST) Insert(nodeId string, clock int16) {
 	}
 
 	if node == nil {
-		newNode = detector.NewTreeNode(nodeId, clock, nil, nil)
+		newNode = newTreeNode(nodeId, clock, nil, nil)
 		if node == d.root {
 			d.root = newNode
 		} else {

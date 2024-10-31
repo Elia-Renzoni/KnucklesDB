@@ -4,7 +4,7 @@ import (
 	"knucklesdb/detector"
 )
 
-const estimateFaultPeriod int16 = 10
+const estimatedFaultPeriod int16 = 10
 
 type FailureDetector struct {
 	detectorTree *DetectionBST
@@ -24,7 +24,7 @@ func (f *FailureDetector) FaultDetection() {
 		sloppyClock int16
 	)
 
-	sloppyClock = rootClock - estimateFaultPeriod
+	sloppyClock = rootClock - estimatedFaultPeriod
 
 	// binary search 
 	for {
