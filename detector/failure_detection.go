@@ -1,26 +1,22 @@
 package detector
 
-import (
-	"knucklesdb/detector"
-)
-
 const estimatedFaultPeriod int16 = 10
 
 type FailureDetector struct {
 	detectorTree *DetectionBST
-	faultyNodes chan <-NodeValues
+	faultyNodes chan NodeValues
 }
 
 func NewFailureDetector(tree *DetectionBST) *FailureDetector {
 	return &FailureDetector{
 		detectorTree: tree,
-		faultyNodes: make(chan <-NodeValues)
+		faultyNodes: make(chan NodeValues),
 	}
 }
 
 func (f *FailureDetector) FaultDetection() {
 	var (
-		rootClock int16 = f.detectorTree.root.values.logicalClock
+		rootClock int16 = f.detectorTree.Root.value.logicalClock
 		sloppyClock int16
 	)
 
@@ -28,7 +24,7 @@ func (f *FailureDetector) FaultDetection() {
 
 	// binary search 
 	for {
-		if node := searchNode(f.detectorTree.root, sloppyClock) node != nil {
+		if node := searchNode(f.detectorTree.Root, sloppyClock); node != nil {
 			f.faultyNodes <- node.value
 			continue
 		}
@@ -40,7 +36,7 @@ func (f *FailureDetector) FaultDetection() {
 	go removeFaultyNodes(f.detectorTree, f.faultyNodes)
 }
 
-func removeFaultyNodes(tree *DetectionBST, faultyNodes chan<-NodeValues) {
+func removeFaultyNodes(tree *DetectionBST, faultyNodes chan NodeValues) {
 	for node := range faultyNodes {
 		tree.Remove(node.nodeId, node.logicalClock)
 	}
@@ -49,8 +45,8 @@ func removeFaultyNodes(tree *DetectionBST, faultyNodes chan<-NodeValues) {
 func searchNode(root *TreeNode, key int16) *TreeNode {
 	var node *TreeNode = root
 
-	for node != nil && node.values.logicalClock > key {
-		if key < node.values.logicalClock {
+	for node != nil && node.value.logicalClock > key {
+		if key < node.value.logicalClock {
 			node = node.left
 		} else {
 			node = node.right
