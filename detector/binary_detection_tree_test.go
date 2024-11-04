@@ -2,6 +2,7 @@ package detector_test
 
 import (
 	"knucklesdb/detector"
+	"testing"
 )
 
 func TestNewDetectionBST(t *testing.T) {

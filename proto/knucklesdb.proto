@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+option go_package = "";
+
+message GetIPOnly {
+    string ipAddress = 1;
+}
+
+message GetEndpointOnly {
+    string serviceEndpoint = 1;
+}
+
+message SetIPOnly {
+    string ipAddress = 1;
+}
+
+message SetEndpointOnly {
+    string endpoint = 1;
+}
+
+message GetResponse {
+    optional string ipAddress = 1;
+    optional int port = 2;
+    optional int16 clock = 3;
+    optional string endpoint = 4;
+}
+
+message SetResponse {}
+
+service KnucklesDBCacheOperations {
+    rpc SearchWithIpOnly(GetIPOnly) returns (GetResponse) {}
+    rpc SearchWIthEndpointOnly(GetEndpointOnly) returns (SetResponse) {}
+}
