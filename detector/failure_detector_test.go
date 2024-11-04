@@ -30,7 +30,10 @@ func TestFaultDetection(t *testing.T) {
 	removedItemsList = append(removedItemsList, "/foo5")
 
 	node := dTree.Root
-	var key int16
+	var (
+		key int16
+		removedCounter int = 0
+	)
 	for _, removedItem := range removedItemsList {
 		switch removedItem {
 		case "/foo3":
@@ -47,5 +50,12 @@ func TestFaultDetection(t *testing.T) {
 				node = node.GetNodeRightChild()
 			}
 		}
+		if node == nil {
+			removedCounter++
+		}
+	}
+	
+	if removedCounter != 3 {
+		t.Fail()
 	}
 }
