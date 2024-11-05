@@ -1,5 +1,10 @@
 package detector
 
+import (
+	"time"
+	"fmt"
+)
+
 const estimatedFaultPeriod int16 = 10
 
 type FailureDetector struct {
@@ -22,6 +27,8 @@ func (f *FailureDetector) FaultDetection() {
 
 	sloppyClock = rootClock - estimatedFaultPeriod
 
+	go f.removeFaultyNodes(f.detectorTree)
+
 	// binary search 
 	for {
 		if node := searchNode(f.detectorTree.Root, sloppyClock); node != nil {
@@ -30,15 +37,24 @@ func (f *FailureDetector) FaultDetection() {
 		}
 		break
 	} 
-
 	close(f.faultyNodes)
-
-	go removeFaultyNodes(f.detectorTree, f.faultyNodes)
 }
 
-func removeFaultyNodes(tree *DetectionBST, faultyNodes chan NodeValues) {
-	for node := range faultyNodes {
-		tree.Remove(node.nodeId, node.logicalClock)
+func (f *FailureDetector) removeFaultyNodes(tree *DetectionBST) {
+	for {
+		select {
+		case node, ok := <- f.faultyNodes:
+			if ok {
+				tree.Remove(node.nodeId, node.logicalClock)
+			} else {
+				break
+			}
+		case <- time.After(5 *time.Second):
+			fmt.Printf("timeout")
+			break
+		default:
+			fmt.Printf("...")
+		}
 	}
 }
 
