@@ -38,9 +38,8 @@ func (f *FailureDetector) FaultDetection() {
 			}
 			break
 		}	
+		close(f.faultyNodes)
 	}()
- 
-	close(f.faultyNodes)
 }
 
 func (f *FailureDetector) removeFaultyNodes(tree *DetectionBST) {
