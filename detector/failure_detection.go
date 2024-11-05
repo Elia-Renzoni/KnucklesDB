@@ -30,13 +30,16 @@ func (f *FailureDetector) FaultDetection() {
 	go f.removeFaultyNodes(f.detectorTree)
 
 	// binary search 
-	for {
-		if node := searchNode(f.detectorTree.Root, sloppyClock); node != nil {
-			f.faultyNodes <- node.value
-			continue
-		}
-		break
-	} 
+	go func () {
+		for {
+			if node := searchNode(f.detectorTree.Root, sloppyClock); node != nil {
+				f.faultyNodes <- node.value
+				continue
+			}
+			break
+		}	
+	}()
+ 
 	close(f.faultyNodes)
 }
 
@@ -51,7 +54,6 @@ func (f *FailureDetector) removeFaultyNodes(tree *DetectionBST) {
 			}
 		case <- time.After(5 *time.Second):
 			fmt.Printf("timeout")
-			break
 		default:
 			fmt.Printf("...")
 		}
@@ -68,6 +70,8 @@ func searchNode(root *TreeNode, key int16) *TreeNode {
 			node = node.right
 		}
 	}
+
+	fmt.Printf("%s", node.value.nodeId)
 
 	return node
 }

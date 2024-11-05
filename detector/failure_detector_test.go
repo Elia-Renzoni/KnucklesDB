@@ -24,7 +24,7 @@ func TestFaultDetection(t *testing.T) {
 	faultsD := detector.NewFailureDetector(dTree)
 	faultsD.FaultDetection()
 
-	var removedItemsList []string = make([]string, 3)
+	var removedItemsList []string = make([]string, 0)
 	removedItemsList = append(removedItemsList, "/foo3")
 	removedItemsList = append(removedItemsList, "/foo4")
 	removedItemsList = append(removedItemsList, "/foo5")
@@ -43,6 +43,7 @@ func TestFaultDetection(t *testing.T) {
 		case "/foo5":
 			key = 20
 		}
+
 		for node != nil && node.GetNodeID() != removedItem {
 			if key < node.GetNodeLogicalClock() {
 				node = node.GetNodeLeftChild()
@@ -54,8 +55,10 @@ func TestFaultDetection(t *testing.T) {
 			removedCounter++
 		}
 	}
+
+	t.Errorf("%d", removedCounter)
 	
-	if removedCounter != 3 {
+	if removedCounter == 3 {
 		t.Fail()
 	}
 }
