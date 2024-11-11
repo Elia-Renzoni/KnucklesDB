@@ -25,11 +25,26 @@ func TestFaultDetection(t *testing.T) {
 	faultsD.FaultDetection()
 
 	var removedItemsList []string = make([]string, 0)
-	removedItemsList = append(removedItemsList, "/foo3")
-	removedItemsList = append(removedItemsList, "/foo4")
-	removedItemsList = append(removedItemsList, "/foo5")
+	removedItemsList = append(removedItemsList, "/foo3", "/foo4", "/foo5")
 
 	node := dTree.Root
+	for node != nil && node.GetNodeLogicalClock() > 40 {
+		if 40 < node.GetNodeLogicalClock() {
+			node = node.GetNodeLeftChild()
+		} else {
+			node = node.GetNodeRightChild()
+		}
+	}
+
+	t.Errorf("SLoppy Clock: %d", dTree.Root.GetNodeLogicalClock() - 10)
+
+	t.Errorf("Node id: %s", node.GetNodeID())
+
+	if node == nil {
+		t.Fail()
+	}
+
+	/*node := dTree.Root
 	var (
 		key int16
 		removedCounter int = 0
@@ -51,14 +66,16 @@ func TestFaultDetection(t *testing.T) {
 				node = node.GetNodeRightChild()
 			}
 		}
+
 		if node == nil {
 			removedCounter++
 		}
 	}
 
 	t.Errorf("%d", removedCounter)
+
 	
-	if removedCounter == 3 {
+	if removedCounter != 3 {
 		t.Fail()
-	}
+	}*/
 }

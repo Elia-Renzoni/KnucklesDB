@@ -1,8 +1,8 @@
 package detector
 
 import (
-	"time"
-	"fmt"
+	_"time"
+	_"fmt"
 )
 
 const estimatedFaultPeriod int16 = 10
@@ -21,40 +21,36 @@ func NewFailureDetector(tree *DetectionBST) *FailureDetector {
 
 func (f *FailureDetector) FaultDetection() {
 	var (
-		rootClock int16 = f.detectorTree.Root.value.logicalClock
+		rootClock int16 = f.detectorTree.Root.GetNodeLogicalClock()
 		sloppyClock int16
 	)
 
 	sloppyClock = rootClock - estimatedFaultPeriod
 
-	go f.removeFaultyNodes(f.detectorTree)
+	go f.removeFaultyNodes()
 
 	// binary search 
 	go func () {
 		for {
 			if node := searchNode(f.detectorTree.Root, sloppyClock); node != nil {
 				f.faultyNodes <- node.value
-				continue
+			} else {
+				break
 			}
-			break
 		}	
 		close(f.faultyNodes)
 	}()
 }
 
-func (f *FailureDetector) removeFaultyNodes(tree *DetectionBST) {
+func (f *FailureDetector) removeFaultyNodes() {
 	for {
 		select {
 		case node, ok := <- f.faultyNodes:
 			if ok {
-				tree.Remove(node.nodeId, node.logicalClock)
+				f.detectorTree.Remove(node.nodeId, node.logicalClock)
 			} else {
 				break
 			}
-		case <- time.After(5 *time.Second):
-			fmt.Printf("timeout")
-		default:
-			fmt.Printf("...")
 		}
 	}
 }
@@ -62,15 +58,13 @@ func (f *FailureDetector) removeFaultyNodes(tree *DetectionBST) {
 func searchNode(root *TreeNode, key int16) *TreeNode {
 	var node *TreeNode = root
 
-	for node != nil && node.value.logicalClock > key {
-		if key < node.value.logicalClock {
-			node = node.left
+	for node != nil && node.GetNodeLogicalClock() > key {
+		if key < node.GetNodeLogicalClock() {
+			node = node.GetNodeLeftChild()
 		} else {
-			node = node.right
+			node = node.GetNodeRightChild()
 		}
 	}
-
-	fmt.Printf("%s", node.value.nodeId)
 
 	return node
 }
