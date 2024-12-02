@@ -7,14 +7,14 @@ import (
 )
 
 func TestNewFailureDetector(t *testing.T) {
-	tree := detector.NewDectionBST()
+	tree := detector.NewDetectionBST()
 	if instance := detector.NewFailureDetector(tree); instance == nil {
 		t.Fail()
 	}
 }
 
 func TestFaultDetection(t *testing.T) {
-	dTree := detector.NewDectionBST()
+	dTree := detector.NewDetectionBST()
 	dTree.Insert("/foo", 50)
 	dTree.Insert("/foo2", 45)
 	dTree.Insert("/foo3", 40)

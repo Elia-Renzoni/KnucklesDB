@@ -6,13 +6,13 @@ import (
 )
 
 func TestNewDetectionBST(t *testing.T) {
-	if instance := detector.NewDectionBST(); instance == nil {
+	if instance := detector.NewDetectionBST(); instance == nil {
 		t.Fail()
 	}
 }
 
 func TestInsertRoot(t *testing.T) {
-	dTree := detector.NewDectionBST()
+	dTree := detector.NewDetectionBST()
 	dTree.Insert("/foo", 78)
 
 	if dTree.Root == nil {
@@ -21,7 +21,7 @@ func TestInsertRoot(t *testing.T) {
 }
 
 func TestInsert(t *testing.T) {
-	dTree := detector.NewDectionBST()
+	dTree := detector.NewDetectionBST()
 	dTree.Insert("/foo", 89)
 	dTree.Insert("/bar", 112)
 	dTree.Insert("/foobar", 55)
@@ -45,7 +45,7 @@ func TestInsert(t *testing.T) {
 }
 
 func TestRemove(t *testing.T) {
-	dTree := detector.NewDectionBST()
+	dTree := detector.NewDetectionBST()
 	dTree.Insert("/oof", 50)
 	dTree.Insert("/rab", 222)
 	dTree.Insert("/oofrab", 21)

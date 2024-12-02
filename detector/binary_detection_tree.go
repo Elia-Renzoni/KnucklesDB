@@ -15,7 +15,7 @@ type NodeValues struct {
 	logicalClock int16
 }
 
-func NewDectionBST() *DetectionBST {
+func NewDetectionBST() *DetectionBST {
 	return &DetectionBST{
 		Root: nil,
 	}
