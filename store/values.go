@@ -33,3 +33,4 @@ func (d *DBvalues) GetLogicalClock() int16 {
 func (d *DBvalues) GetOptionalEndpoint() string {
 	return d.endpoint
 }
+
