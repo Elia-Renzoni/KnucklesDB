@@ -45,7 +45,7 @@ func (r *Replica) Start() {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			// to handle
+			fmt.Printf("%v", err)
 		}
 
 		go r.handleConnection(conn)
