@@ -30,7 +30,7 @@ func (k *KnucklesDB) SetWithIpAddressOnly(address string, values *DBvalues) (err
 	_, ok := k.cache[address]
 
 	if ok {
-		return errors.New("The IP Address Already Exist")
+		delete(k.cache, address)
 	}
 
 	k.cache[address] = values
@@ -47,7 +47,7 @@ func (k *KnucklesDB) SetWithEndpointOnly(endpoint string, values *DBvalues) (err
 	
 	_, ok := k.cache[endpoint]
 	if ok {
-		return errors.New("The Endpoint Already Exist")
+		delete(k.cache, endpoint)
 	}
 
 	k.cache[endpoint] = values
