@@ -4,6 +4,7 @@ import (
 	_"time"
 	_"fmt"
 	"sync"
+	"time"
 )
 
 const estimatedFaultPeriod int16 = 10
@@ -11,14 +12,16 @@ const estimatedFaultPeriod int16 = 10
 type FailureDetector struct {
 	detectorTree *DetectionBST
 	faultyNodes chan NodeValues
+	detectionWaiting chan struct{}
 	helper *Helper
 	wg *sync.WaitGroup{}
 }
 
-func NewFailureDetector(tree *DetectionBST, helper *Helper, wg *sync.WaitGroup) *FailureDetector {
+func NewFailureDetector(tree *DetectionBST, helper *Helper, wg *sync.WaitGroup, waiting chan struct{}) *FailureDetector {
 	return &FailureDetector{
 		detectorTree: tree,
 		faultyNodes: make(chan NodeValues),
+		detectionWaiting: waiting,
 		helper: helper,
 		wg: wg,
 	}
@@ -26,28 +29,33 @@ func NewFailureDetector(tree *DetectionBST, helper *Helper, wg *sync.WaitGroup) 
 
 func (f *FailureDetector) FaultDetection() {
 	var (
-		rootClock int16 = f.detectorTree.Root.GetNodeLogicalClock()
+		rootClock int16
 		sloppyClock int16
 	)
+	for {
+		time.Sleep(time.Duration(5))
+		<- f.detectionWaiting
 
-	sloppyClock = rootClock - estimatedFaultPeriod
+		rootClock = f.detectionTree.Root.GetNodeLogicalClock()
+		sloppyClock = rootClock - estimatedFaultPeriod
 
-	go f.removeFaultyNodes()
+		go f.removeFaultyNodes()
 
-	// binary search 
-	go func (wg *sync.WaitGroup) {
-		defer wg.Done()
-		wg.Add(1)
+		// binary search 
+		go func (wg *sync.WaitGroup) {
+			defer wg.Done()
+			wg.Add(1)
 
-		for {
-			if node := searchNode(f.detectorTree.Root, sloppyClock); node != nil {
-				f.faultyNodes <- node.value
-			} else {
-				break
-			}
-		}	
-		close(f.faultyNodes)
-	}(f.wg)
+			for {
+				if node := searchNode(f.detectorTree.Root, sloppyClock); node != nil {
+					f.faultyNodes <- node.value
+				} else {
+					break
+				}
+			}	
+			close(f.faultyNodes)
+		}(f.wg)
+	}
 }
 
 func (f *FailureDetector) removeFaultyNodes() {

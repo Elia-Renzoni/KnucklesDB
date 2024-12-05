@@ -21,28 +21,30 @@ func NewHelper(wg *sync.WaitGroup) *Helper {
 }
 
 func (h *Helper) StartEvictionProcess() {	
-	h.wg.Wait()
+	for {
+		h.wg.Wait()
 
-	for index := range h.nodesToEvict {
-		node := h.nodesToEvict[index]
-		switch  {
-		case node.GetIpAddress() == nil:
-			fallthrough
-		case node.GetOptionalEndpoint() != "":
-			nodeVals, _ := store.SearchWithEndpointOnly(node.GetOptionalEndpoint())
-			if nodeVals.GetLogicalClock() == node.GetLogicalClock() {
-				store.Eviction(nodeVals.GetOptionalEndpoint())
-			}
-		case node.GetIpAddress() != nil:
-			fallthrough
-		case node.GetOptionalEndpoint() == "":
-			nodeVals, _ := store.SearchWithIpOnly(node.GetIpAddress())
-			if nodeVals.GetLogicalClock() == node.GetLogicalClock() {
-				store.Eviction(nodeVals.GetIpAddress())
+		for index := range h.nodesToEvict {
+			node := h.nodesToEvict[index]
+			switch  {
+			case node.GetIpAddress() == nil:
+				fallthrough
+			case node.GetOptionalEndpoint() != "":
+				nodeVals, _ := store.SearchWithEndpointOnly(node.GetOptionalEndpoint())
+				if nodeVals.GetLogicalClock() == node.GetLogicalClock() {
+					store.Eviction(nodeVals.GetOptionalEndpoint())
+				}
+			case node.GetIpAddress() != nil:
+				fallthrough
+			case node.GetOptionalEndpoint() == "":
+				nodeVals, _ := store.SearchWithIpOnly(node.GetIpAddress())
+				if nodeVals.GetLogicalClock() == node.GetLogicalClock() {
+					store.Eviction(nodeVals.GetIpAddress())
+				}
 			}
 		}
+		slices.Delete(h.nodesToEvict, 0, len(h.nodesToEvict))
 	}
-	slices.Delete(h.nodesToEvict, 0, len(h.nodesToEvict))
 }
 
 
