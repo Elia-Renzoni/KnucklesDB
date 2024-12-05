@@ -10,12 +10,14 @@ const estimatedFaultPeriod int16 = 10
 type FailureDetector struct {
 	detectorTree *DetectionBST
 	faultyNodes chan NodeValues
+	helper *Helper
 }
 
-func NewFailureDetector(tree *DetectionBST) *FailureDetector {
+func NewFailureDetector(tree *DetectionBST, helper *Helper) *FailureDetector {
 	return &FailureDetector{
 		detectorTree: tree,
 		faultyNodes: make(chan NodeValues),
+		helper: helper,
 	}
 }
 
@@ -48,6 +50,7 @@ func (f *FailureDetector) removeFaultyNodes() {
 		case node, ok := <- f.faultyNodes:
 			if ok {
 				f.detectorTree.Remove(node.nodeId, node.logicalClock)
+				f.helper.AddNodeToEvict(node)
 			} else {
 				break
 			}
