@@ -36,7 +36,9 @@ func (f *FailureDetector) FaultDetection() {
 
 	// binary search 
 	go func (wg *sync.WaitGroup) {
-		wg.Add()
+		defer wg.Done()
+		wg.Add(1)
+
 		for {
 			if node := searchNode(f.detectorTree.Root, sloppyClock); node != nil {
 				f.faultyNodes <- node.value
@@ -45,12 +47,13 @@ func (f *FailureDetector) FaultDetection() {
 			}
 		}	
 		close(f.faultyNodes)
-		wg.Done()
 	}(f.wg)
 }
 
 func (f *FailureDetector) removeFaultyNodes() {
-	f.wg.Add()
+	defer f.wg.Done()
+	f.wg.Add(1)
+
 	for {
 		select {
 		case node, ok := <- f.faultyNodes:
@@ -62,7 +65,6 @@ func (f *FailureDetector) removeFaultyNodes() {
 			}
 		}
 	}
-	f.wg.Done()
 }
 
 func searchNode(root *TreeNode, key int16) *TreeNode {

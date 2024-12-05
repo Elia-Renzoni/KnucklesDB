@@ -22,10 +22,11 @@ func main() {
 	go internalClock.IncrementLogicalClock()
 	go failureDetector.FaultDetection()
 	go func() {
-		wg.Add()
+		defer wg.Done()
+		wg.Add(1)
+
 		// TODO:
 		// sync tree goroutine and detectio goroutine
-		wg.Done()
 	}()
 	go helper.StartEvictionProcess()
 
