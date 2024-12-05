@@ -3,20 +3,26 @@ package detector
 import (
 	"knucklesdb/store"
 	"net"
+	"slices"
+	"sync"
 )
 
 
 type Helper struct {
 	nodesToEvict []NodeValues
+	wg *sync.WaitGroup
 }
 
-func NewHelper() *Helper {
+func NewHelper(wg *sync.WaitGroup) *Helper {
 	return &Helper{
-		nodesToEvict: make([]NodeValues, 0)
+		nodesToEvict: make([]NodeValues, 0),
+		wg: wg,
 	}
 }
 
-func (h *Helper) StartEvictionProcess() {
+func (h *Helper) StartEvictionProcess() {	
+	h.wg.Wait()
+
 	for index := range h.nodesToEvict {
 		node := h.nodesToEvict[index]
 		switch  {
@@ -36,7 +42,7 @@ func (h *Helper) StartEvictionProcess() {
 			}
 		}
 	}
-	// TODO: delete the slice
+	slices.Delete(h.nodesToEvict, 0, len(h.nodesToEvict))
 }
 
 
