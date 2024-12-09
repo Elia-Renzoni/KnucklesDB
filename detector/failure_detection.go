@@ -31,7 +31,6 @@ func (f *FailureDetector) FaultDetection() {
 		sloppyClock int16
 	)
 	for {	
-		//time.Sleep(time.Duration(5))
 		v := <- f.detectionWaiting
 		fmt.Printf("%v", v)
 

@@ -3,38 +3,49 @@ package main
 import (
 	"time"
 	"net"
-	"os"
 	"fmt"
+	"encoding/json"
 )
+
+type Payload struct {
+	types string `json:"type"`
+	method string `json:"method"`
+	parameter string `json:"parameter"`
+	port int `json:"port"`
+}
+
+type ErrorResponse struct {
+	rError string `json:"error"`
+}
 
 func main() {
 	// every seconds send an hearthbeat to KncklesDB
-	conn, err := net.Dial("tcp", "127.0.0.1:5050")
-	if err != nil {
-		os.Exit(1)
+	p := &Payload{
+		types: "ip",
+		method: "set",
+		parameter: "192.89.12.3",
+		port: 5056,
 	}
 
-
-    byt := []byte(`{"type":"ip",
-					"method":"set",
-					"parameter":"192.89.12.3",
-					"port": 7075}`)
+	payload, _ := json.Marshal(p)
 
 	for {
-		time.Sleep(time.Second)
-		_, err := conn.Write(byt)
+		conn, err := net.Dial("tcp", "127.0.0.1:5050")
 		if err != nil {
 			break
 		}
+
+		time.Sleep(time.Second)
+		conn.Write(payload)
 
 		reply := make([]byte, 2024)
-		_, err := conn.Read(reply)
+		conn.Read(reply)
 
-		fmt.Printf(reply)
+		data := &ErrorResponse{} 
+		
+		json.Unmarshal(reply, data)
+		fmt.Println(string(data.rError))
 
-		if err != nil {
-			break
-		}
 		conn.Close()
 	}
 }

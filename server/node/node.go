@@ -16,7 +16,6 @@ type Replica struct {
 	listenPort string
 	internalClock *clock.LogicalClock
 	db *store.KnucklesDB
-	//values *store.DBvalues
 }
 
 type Message struct {
@@ -47,6 +46,7 @@ func (r *Replica) Start() {
 
 	for {
 		conn, err := ln.Accept()
+
 		if err != nil {
 			fmt.Printf("%v", err)
 		}
@@ -74,6 +74,9 @@ func (r *Replica) handleConnection(conn net.Conn) {
 	var msg = &Message{}
 
 	json.Unmarshal(messageBuffer, msg)
+
+	fmt.Println(msg.methodType)
+
 	switch msg.methodType {
 	case "set":
 		if setErr = r.handleSetRequest(msg.methodName, msg.parameter, msg.port); setErr != nil {
@@ -109,6 +112,7 @@ func (r *Replica) handleConnection(conn net.Conn) {
 		payload, _ := json.Marshal(map[string]string{
 			"error": "Illegal Method Type",
 		})
+		fmt.Printf("pippo")
 		conn.Write(payload)
 	}
 }

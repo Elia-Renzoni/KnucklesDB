@@ -5,6 +5,7 @@ import (
 	"sync"
 	"net"
 	"strings"
+	"fmt"
 )
 
 type KnucklesDB struct {
@@ -34,6 +35,9 @@ func (k *KnucklesDB) SetWithIpAddressOnly(address string, values *DBvalues) (err
 	}
 
 	k.cache[address] = values
+
+	// only for debug
+	fmt.Printf("Set IP\n")
 	return
 }
 
@@ -51,6 +55,9 @@ func (k *KnucklesDB) SetWithEndpointOnly(endpoint string, values *DBvalues) (err
 	}
 
 	k.cache[endpoint] = values
+
+	// only for debug
+	fmt.Printf("Set Endpoint\n")
 	return
 }
 
@@ -68,6 +75,9 @@ func (k *KnucklesDB) SearchWithIpOnly(address string) (values *DBvalues, err err
 	}
 
 	values = k.cache[address]
+	
+	// only for debug
+	fmt.Printf("Get IP\n")
 	return
 }
 
@@ -85,6 +95,9 @@ func (k *KnucklesDB) SearchWithEndpointOnly(endpoint string) (values *DBvalues, 
 	}
 
 	values = k.cache[endpoint]
+
+	// only for debug
+	fmt.Printf("Get Endpoint\n")
 	return
 }
 
