@@ -4,11 +4,6 @@ import (
 	"time"
 )
 
-type KnucklesClock interface {
-	IncrementLogicalClock()
-	GetLogicalClock() int16
-}
-
 type LogicalClock struct {
 	// logical clock
 	knucklesLogicalClock int16
@@ -38,14 +33,14 @@ func NewLogicalClock(timing int, limiter int16) *LogicalClock {
 
 func (l *LogicalClock) IncrementLogicalClock() {
 	for {
-		time.Sleep(time.Duration(l.timing))
-
 		l.knucklesLogicalClock++
 
 		if l.knucklesLogicalClock >= l.maxValueLimiter {
 			l.knucklesLogicalClock = 0
 		}
 		writeClock(l.clocks, l.knucklesLogicalClock)
+
+		time.Sleep(time.Duration(l.timing))
 	}
 }
 

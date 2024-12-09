@@ -6,33 +6,34 @@ import (
 	"encoding/json"
 	"knucklesdb/clock"
 	"knucklesdb/store"
-	"strings"
+	"fmt"
+	"errors"
 )
 
 type Replica struct {
 	replicaID id.UUID 
 	address string
 	listenPort string
-	internalClock *clock.KnucklesClock
+	internalClock *clock.LogicalClock
 	db *store.KnucklesDB
-	values *store.DBvalues
+	//values *store.DBvalues
 }
 
 type Message struct {
 	methodType string `json:"type"`	
 	methodName string `json:"method"`   
 	parameter string `json:"parameter"`
+	port int `json:"port"`
 }
 
-func NewReplica(address string, port string, logiclaClock *clock.KnucklesClock,
-				db *store.KnucklesDB, values *store.DBvalues) *Replica {
+func NewReplica(address string, port string, logicalClock *clock.LogicalClock,
+				db *store.KnucklesDB) *Replica {
 	return &Replica{
 		replicaID: id.New(),
 		address: address,
 		listenPort: port,
 		internalClock: logicalClock,
 		db: db,
-		values: values,
 	}
 }
 
@@ -41,6 +42,8 @@ func (r *Replica) Start() {
 	if err != nil {
 		fmt.Printf("In the replica %s occurred %v", r.replicaID.String(), err)
 	}	
+
+	fmt.Printf("Server Listening...\n")
 
 	for {
 		conn, err := ln.Accept()
@@ -65,15 +68,15 @@ func (r *Replica) handleConnection(conn net.Conn) {
 	messageBuffer := make([]byte, 2024)
 	_, err := conn.Read(messageBuffer)
 	if err != nil {
-		return err
+		fmt.Printf("%v", err)
 	}
 
 	var msg = &Message{}
 
-	json.Unmarshal(msg, messageBuffer)
+	json.Unmarshal(messageBuffer, msg)
 	switch msg.methodType {
 	case "set":
-		if setErr = handleSetRequest(msg.methodName, msg.parameter); setErr != nil {
+		if setErr = r.handleSetRequest(msg.methodName, msg.parameter, msg.port); setErr != nil {
 			payload, _ := json.Marshal(map[string]string{
 				"error": err.Error(),
 			})
@@ -84,8 +87,8 @@ func (r *Replica) handleConnection(conn net.Conn) {
 			})		
 			conn.Write(payload)
 		}
-	case "get";
-		if getErr, value = handleGetRequest(msg.methodName, msg.parameter); getErr != nil {
+	case "get": 
+		if getErr, value = r.handleGetRequest(msg.methodName, msg.parameter); getErr != nil {
 			payload, _ := json.Marshal(map[string]string{
 				"error": err.Error(),
 			})
@@ -104,21 +107,20 @@ func (r *Replica) handleConnection(conn net.Conn) {
 		}
 	default:
 		payload, _ := json.Marshal(map[string]string{
-			"error": "Illegal Method Type"
+			"error": "Illegal Method Type",
 		})
+		conn.Write(payload)
 	}
 }
 
-func (r *Replica) handleSetRequest(methodName string, parameter string) error {
+func (r *Replica) handleSetRequest(methodName string, parameter string, port int) error {
 	switch methodName {
 	case "ip":
-		host, port, _ := net.SplitHostPort(parameter)
-		value := store.NewDBValues(host, port, r.internalClock.GetLogicalClock(), "")
-		r.db.SetWithIpAddressOnly(host, value)
+		value := store.NewDBValues(net.ParseIP(parameter), port, r.internalClock.GetLogicalClock(), "")
+		r.db.SetWithIpAddressOnly(parameter, value)
 	case "end":
-		splitted := strings.Split(parameter, ":")
-		value := store.NewDBValues(nil, splitted[1], r.internalClock.GetLogicalClock(), splitted[0])
-		r.db.SetWithEndpointOnly(splitted[0], value)
+		value := store.NewDBValues(nil, port, r.internalClock.GetLogicalClock(), parameter)
+		r.db.SetWithEndpointOnly(parameter, value)
 	default:
 		return errors.New("Illegal Parameterr")
 	}
@@ -143,7 +145,7 @@ func (r *Replica) handleGetRequest(methodName string, parameter string) (error, 
 			return err, nil
 		}
 	default:
-		return errors.New("Illegal Parameter")
+		return errors.New("Illegal Parameter"), nil
 	}
 	return nil, value
 }

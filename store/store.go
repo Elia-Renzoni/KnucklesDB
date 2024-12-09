@@ -102,8 +102,8 @@ func (k *KnucklesDB) Eviction(entryID string) (err error) {
 }
 
 type NodePairs struct {
-	nodeID string
-	clock int16
+	NodeID string
+	Clock int16
 }
 
 type entries []NodePairs
@@ -116,8 +116,8 @@ func (k *KnucklesDB) ReturnEntries() entries {
 
 	for key, value := range k.cache {
 		pairs = append(pairs, NodePairs{
-			nodeID: key,
-			clock: value.logicalClock,
+			NodeID: key,
+			Clock: value.logicalClock,
 		})
 	}
 	return pairs

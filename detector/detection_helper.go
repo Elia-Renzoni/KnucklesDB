@@ -10,12 +10,14 @@ import (
 
 type Helper struct {
 	nodesToEvict []NodeValues
-	wg *sync.WaitGroup
+	db *store.KnucklesDB
+	wg sync.WaitGroup
 }
 
-func NewHelper(wg *sync.WaitGroup) *Helper {
+func NewHelper(wg sync.WaitGroup, db *store.KnucklesDB) *Helper {
 	return &Helper{
 		nodesToEvict: make([]NodeValues, 0),
+		db: db,
 		wg: wg,
 	}
 }
@@ -26,20 +28,15 @@ func (h *Helper) StartEvictionProcess() {
 
 		for index := range h.nodesToEvict {
 			node := h.nodesToEvict[index]
-			switch  {
-			case node.GetIpAddress() == nil:
-				fallthrough
-			case node.GetOptionalEndpoint() != "":
-				nodeVals, _ := store.SearchWithEndpointOnly(node.GetOptionalEndpoint())
-				if nodeVals.GetLogicalClock() == node.GetLogicalClock() {
-					store.Eviction(nodeVals.GetOptionalEndpoint())
+			if ip := net.ParseIP(node.nodeId); ip != nil {
+				nodeVals, _ := h.db.SearchWithIpOnly(ip.String())
+				if nodeVals.GetLogicalClock() == node.logicalClock {
+					h.db.Eviction(nodeVals.GetIpAddress().String())
 				}
-			case node.GetIpAddress() != nil:
-				fallthrough
-			case node.GetOptionalEndpoint() == "":
-				nodeVals, _ := store.SearchWithIpOnly(node.GetIpAddress())
-				if nodeVals.GetLogicalClock() == node.GetLogicalClock() {
-					store.Eviction(nodeVals.GetIpAddress())
+			} else {
+				nodeVals, _ := h.db.SearchWithEndpointOnly(node.nodeId)
+				if nodeVals.GetLogicalClock() == node.logicalClock {
+					h.db.Eviction(nodeVals.GetOptionalEndpoint())
 				}
 			}
 		}

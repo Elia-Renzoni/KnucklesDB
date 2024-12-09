@@ -1,10 +1,8 @@
 package detector
 
 import (
-	_"time"
-	_"fmt"
+	"fmt"
 	"sync"
-	"time"
 )
 
 const estimatedFaultPeriod int16 = 10
@@ -14,10 +12,10 @@ type FailureDetector struct {
 	faultyNodes chan NodeValues
 	detectionWaiting chan struct{}
 	helper *Helper
-	wg *sync.WaitGroup{}
+	wg sync.WaitGroup
 }
 
-func NewFailureDetector(tree *DetectionBST, helper *Helper, wg *sync.WaitGroup, waiting chan struct{}) *FailureDetector {
+func NewFailureDetector(tree *DetectionBST, helper *Helper, wg sync.WaitGroup, waiting chan struct{}) *FailureDetector {
 	return &FailureDetector{
 		detectorTree: tree,
 		faultyNodes: make(chan NodeValues),
@@ -32,17 +30,18 @@ func (f *FailureDetector) FaultDetection() {
 		rootClock int16
 		sloppyClock int16
 	)
-	for {
-		time.Sleep(time.Duration(5))
-		<- f.detectionWaiting
+	for {	
+		//time.Sleep(time.Duration(5))
+		v := <- f.detectionWaiting
+		fmt.Printf("%v", v)
 
-		rootClock = f.detectionTree.Root.GetNodeLogicalClock()
+		rootClock = f.detectorTree.Root.GetNodeLogicalClock()
 		sloppyClock = rootClock - estimatedFaultPeriod
 
 		go f.removeFaultyNodes()
 
 		// binary search 
-		go func (wg *sync.WaitGroup) {
+		go func (wg sync.WaitGroup) {
 			defer wg.Done()
 			wg.Add(1)
 
