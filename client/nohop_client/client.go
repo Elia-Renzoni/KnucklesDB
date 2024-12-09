@@ -7,12 +7,12 @@ import (
 	"encoding/json"
 )
 
-type Payload struct {
+/*type Payload struct {
 	types string `json:"type"`
 	method string `json:"method"`
 	parameter string `json:"parameter"`
 	port int `json:"port"`
-}
+}*/
 
 type ErrorResponse struct {
 	rError string `json:"error"`
@@ -20,14 +20,14 @@ type ErrorResponse struct {
 
 func main() {
 	// every seconds send an hearthbeat to KncklesDB
-	p := &Payload{
+	/*p := &Payload{
 		types: "ip",
 		method: "set",
 		parameter: "192.89.12.3",
 		port: 5056,
-	}
+	}*/
 
-	payload, _ := json.Marshal(p)
+	/*payload, _ := json.Marshal(p)*/
 
 	for {
 		conn, err := net.Dial("tcp", "127.0.0.1:5050")
@@ -36,14 +36,14 @@ func main() {
 		}
 
 		time.Sleep(time.Second)
-		conn.Write(payload)
+		conn.Write([]byte(`{"type": "ip","method": "set","parameter": "192.89.12.3","port": 5050}`))
 
 		reply := make([]byte, 2024)
-		conn.Read(reply)
+		n, _ := conn.Read(reply)
 
 		data := &ErrorResponse{} 
 		
-		json.Unmarshal(reply, data)
+		json.Unmarshal(reply[:n], data)
 		fmt.Println(string(data.rError))
 
 		conn.Close()

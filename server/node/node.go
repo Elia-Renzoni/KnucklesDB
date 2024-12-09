@@ -66,17 +66,28 @@ func (r *Replica) handleConnection(conn net.Conn) {
 	defer conn.Close()
 
 	messageBuffer := make([]byte, 2024)
-	_, err := conn.Read(messageBuffer)
+	n, err := conn.Read(messageBuffer)
 	if err != nil {
 		fmt.Printf("%v", err)
 	}
 
+	fmt.Printf(string(messageBuffer[:n]))
+
 	var msg = &Message{}
 
-	json.Unmarshal(messageBuffer, msg)
+	/*if err := json.Unmarshal(messageBuffer[:n], msg); err != nil {
+		fmt.Printf("\n%v\n", err)
+	}*/
 
-	fmt.Println(msg.methodType)
+	// TODO
+	decoder := json.NewDecoder(conn)
+	if err := decoder.Decode(msg); err != nil {
+		fmt.Printf("\n %v \n", err)
+	}
 
+
+	fmt.Printf("%s\n", msg.methodType)
+	
 	switch msg.methodType {
 	case "set":
 		if setErr = r.handleSetRequest(msg.methodName, msg.parameter, msg.port); setErr != nil {
@@ -112,7 +123,7 @@ func (r *Replica) handleConnection(conn net.Conn) {
 		payload, _ := json.Marshal(map[string]string{
 			"error": "Illegal Method Type",
 		})
-		fmt.Printf("pippo")
+		fmt.Printf("pippo\n")
 		conn.Write(payload)
 	}
 }
