@@ -7,9 +7,14 @@ import (
 	"knucklesdb/store"
 	"sync"
 	"time"
+	"flag"
 )
 
 func main() {
+	host := flag.String("host", "localhost", "a string")
+	port := flag.String("port", "5050", "a string")
+
+
 	var wg sync.WaitGroup
 	var detectionInsertionWaiting = make(chan struct{})
 
@@ -18,7 +23,7 @@ func main() {
 	helper := detector.NewHelper(wg, database)
 	detectionTree := detector.NewDetectionBST()
 	failureDetector := detector.NewFailureDetector(detectionTree, helper, wg, detectionInsertionWaiting)
-	replica := node.NewReplica("127.0.0.1", "5050", internalClock, database)
+	replica := node.NewReplica(*host, *port, internalClock, database)
 
 	go internalClock.IncrementLogicalClock()
 	go func(){
