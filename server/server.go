@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 	"flag"
+	"fmt"
 )
 
 func main() {
@@ -36,6 +37,8 @@ func main() {
 				wg.Add(1)
 				// tree creation
 				for _, value := range entries {
+					// only for debug
+					fmt.Printf("%v - %v", value.NodeID, value.Clock)
 					detectionTree.Insert(value.NodeID, value.Clock)
 				}
 
