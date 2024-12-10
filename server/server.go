@@ -11,8 +11,8 @@ import (
 )
 
 func main() {
-	host := flag.String("host", "localhost", "a string")
-	port := flag.String("port", "5050", "a string")
+	host := flag.String("h", "localhost", "a string")
+	port := flag.String("p", "5050", "a string")
 
 
 	var wg sync.WaitGroup
