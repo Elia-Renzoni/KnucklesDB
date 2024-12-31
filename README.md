@@ -13,4 +13,4 @@ Through the paginator algorithm, it is possible for a single replica to manage n
 * KnucklesDB's crash recovery model is not based on full checkpointing, but rather on reading the WAL.
 * KnucklesDB cluster membership is based on the SWIM protocol.
 
-
+## Tree-Based LRU Algorithm
