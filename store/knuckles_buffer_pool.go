@@ -17,7 +17,7 @@ func NewBufferPool() *BufferPool {
 }
 
 func (b *BufferPool) WritePage(pageID int, key, value []byte, clock int) {
-	var page *Page = Palloc(clock, key, value, pageID)
+	var page *Page = Palloc(clock, pageID)
 	page.AddPage(key, value)
 	b.pages[pageID] = page
 }
