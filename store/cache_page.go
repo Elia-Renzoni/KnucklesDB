@@ -26,15 +26,13 @@ type Page struct {
 	// the page id is mark out by the index of the array
 	pageID int
 
-	// logical clock increased by the clock module
-	knucklesClock int
-
 	// linked list
 	collisionList *CollisionBuffer
 }
 
 type Bucket struct {
-	bucketData [PAGE_SIZE]byte
+	bucketData    [PAGE_SIZE]byte
+	knucklesClock int
 }
 
 type CollisionBufferNode struct {
@@ -47,10 +45,9 @@ type CollisionBuffer struct {
 	head *CollisionBufferNode
 }
 
-func Palloc(logicalClock, bucketID int) *Page {
+func Palloc(bucketID int) *Page {
 	return &Page{
 		pageID:        bucketID,
-		knucklesClock: logicalClock,
 		collisionList: newCollisionBuffer(),
 	}
 }
@@ -73,13 +70,15 @@ func newCollisionBufferNode(bucket Bucket) *CollisionBufferNode {
 *   @param key
 *   @param value
 **/
-func (p *Page) AddPage(key, value []byte) {
+func (p *Page) AddPage(key, value []byte, logicalClock int) {
 	var (
 		b                 Bucket = Bucket{}
 		node, currentNode *CollisionBufferNode
 	)
 
 	b.bucketData = fillBucket(key, value)
+	b.knucklesClock = logicalClock
+
 	node = newCollisionBufferNode(b)
 
 	if p.collisionList.head == nil {

@@ -1,3 +1,10 @@
+/**
+*	this file contains the mplementation of the buffer pool,
+*    there are 3000 pages inside the buffer. Each page is uniquely indicated by the index of the array.
+*	Each page contains a list of buckets
+*
+**/
+
 package store
 
 import (
@@ -16,12 +23,31 @@ func NewBufferPool() *BufferPool {
 	return &BufferPool{}
 }
 
+/**
+*	@brief This method allows you to allocate a new page
+*	@param index of the array
+*	@param key to store
+*   @param value to store
+*   @param logical clock
+ */
 func (b *BufferPool) WritePage(pageID int, key, value []byte, clock int) {
-	var page *Page = Palloc(clock, pageID)
-	page.AddPage(key, value)
-	b.pages[pageID] = page
+	var page *Page = b.pages[pageID]
+	if page == nil {
+		page = Palloc(clock)
+		page.AddPage(key, value, clock)
+		b.pages[pageID] = page
+	} else {
+		page.AddPage(key, value, clock)
+	}
 }
 
+/**
+*	@brief This method allows to read the value of a key-value pair
+*	@param index of the array
+*	@param key to search
+*   @return miss or hit
+*	@return value
+ */
 func (b *BufferPool) ReadPage(pageID int, key []byte) (error, []byte) {
 	var page *Page = b.pages[pageID]
 
@@ -33,6 +59,17 @@ func (b *BufferPool) ReadPage(pageID int, key []byte) (error, []byte) {
 	return err, value
 }
 
-func (b *BufferPool) EvictPage(pageID int) {
-	// TODO
+/**
+*	@brief This method is called only by the paginator to evict pages
+*	@param index of the array
+*	@param key to search
+*	@return result of the op.
+ */
+func (b *BufferPool) EvictPage(pageID int, key []byte) bool {
+	var (
+		page   *Page = b.pages[pageID]
+		result bool
+	)
+	result = page.DeleteBucket(key)
+	return result
 }
