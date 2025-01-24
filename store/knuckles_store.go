@@ -35,7 +35,14 @@ func NewKnucklesMap(bPool *BufferPool, t *AddressBinder, h *SpookyHash) *Knuckle
 *   @param value
 **/
 func (k *KnucklesMap) Set(key []byte, value []byte) {
+	var (
+		hash   uint32
+		pageID uint32
+	)
 
+	hash = k.hasher.Hash32(key)
+	pageID = k.addressTranslator.TranslateHash(hash)
+	k.bufferPool.WritePage(int(pageID), key, value, 0)
 }
 
 /**
@@ -43,6 +50,14 @@ func (k *KnucklesMap) Set(key []byte, value []byte) {
 *	@param search key
 *	@return value stored in a bucket
  */
-func (k *KnucklesMap) Get(key []byte) (value []byte) {
-	return
+func (k *KnucklesMap) Get(key []byte) (error, []byte) {
+	var (
+		hash   uint32
+		pageID uint32
+	)
+
+	hash = k.hasher.Hash32(key)
+	pageID = k.addressTranslator.TranslateHash(hash)
+	err, value := k.bufferPool.ReadPage(int(pageID), key)
+	return err, value
 }
