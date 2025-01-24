@@ -29,38 +29,120 @@ type Page struct {
 	// logical clock increased by the clock module
 	knucklesClock int
 
-	collisionList []Bucket
+	// linked list
+	collisionList *CollisionBuffer
 }
 
 type Bucket struct {
 	bucketData [PAGE_SIZE]byte
 }
 
+type CollisionBufferNode struct {
+	bucketNode Bucket
+	next       *CollisionBufferNode
+}
+
+// Buffer for the collisions that may occur
+type CollisionBuffer struct {
+	head *CollisionBufferNode
+}
+
 func Palloc(logicalClock, bucketID int) *Page {
 	return &Page{
 		pageID:        bucketID,
 		knucklesClock: logicalClock,
-		collisionList: make([]Bucket, 0),
+		collisionList: newCollisionBuffer(),
 	}
 }
 
-func (p *Page) AddPage(key, value []byte) {
-	var b Bucket = Bucket{}
-	b.bucketData = fillBucket(key, value)
-
-	p.collisionList = append(p.collisionList, b)
+func newCollisionBuffer() *CollisionBuffer {
+	return &CollisionBuffer{
+		head: nil,
+	}
 }
 
+func newCollisionBufferNode(bucket Bucket) *CollisionBufferNode {
+	return &CollisionBufferNode{
+		bucketNode: bucket,
+		next:       nil,
+	}
+}
+
+/**
+*	@brief This Method add a new page to the collision Linked List
+*   @param key
+*   @param value
+**/
+func (p *Page) AddPage(key, value []byte) {
+	var (
+		b                 Bucket = Bucket{}
+		node, currentNode *CollisionBufferNode
+	)
+
+	b.bucketData = fillBucket(key, value)
+	node = newCollisionBufferNode(b)
+
+	if p.collisionList.head == nil {
+		p.collisionList.head = node
+	} else {
+		currentNode = p.collisionList.head
+		for currentNode.next != nil {
+			currentNode = currentNode.next
+		}
+
+		currentNode.next = node
+	}
+}
+
+/**
+*	@brief This Method fetch the given data in the collision list
+*	@param key
+*	@return error value indicating the result of the operation
+*	@return value to return <key, value>
+**/
 func (p *Page) ReadValueFromBucket(key []byte) (error, []byte) {
-	for index := range p.collisionList {
-		bucket := p.collisionList[index]
-		if result := bytes.Contains(bucket.bucketData[:], key); result == true {
-			_, valueToRetrieve, _ := bytes.Cut(bucket.bucketData[:], []byte("@"))
+	var (
+		node *CollisionBufferNode = p.collisionList.head
+	)
+
+	for node.next != nil {
+		nodeBucketData := node.bucketNode.bucketData
+		if result := bytes.Contains(nodeBucketData[:], key); result {
+			_, valueToRetrieve, _ := bytes.Cut(nodeBucketData[:], []byte("@"))
 			return nil, valueToRetrieve
 		}
+		node = node.next
 	}
 
 	return errors.New("Cache Miss"), nil
+}
+
+/**
+*	@brief This Method search and delete the given bucket from the collision list
+*   @param key to search in list
+*   @return result of the operation
+**/
+func (p *Page) DeleteBucket(key []byte) bool {
+	var (
+		node         *CollisionBufferNode = p.collisionList.head
+		previousNode *CollisionBufferNode
+	)
+
+	for node.next != nil {
+		nodeBucketData := node.bucketNode.bucketData
+		if result := bytes.Contains(nodeBucketData[:], key); result {
+			if previousNode == nil {
+				p.collisionList.head = node.next
+			} else {
+				previousNode.next = node.next
+			}
+			return true
+		}
+		previousNode = node
+		node = node.next
+	}
+
+	return false
 }
 
 /**
