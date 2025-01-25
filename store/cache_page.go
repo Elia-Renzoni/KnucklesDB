@@ -91,6 +91,9 @@ func (p *Page) AddPage(key, value []byte, logicalClock int) {
 
 		currentNode.next = node
 	}
+
+	
+	
 }
 
 /**
@@ -104,7 +107,7 @@ func (p *Page) ReadValueFromBucket(key []byte) (error, []byte) {
 		node *CollisionBufferNode = p.collisionList.head
 	)
 
-	for node.next != nil {
+	for node != nil {
 		nodeBucketData := node.bucketNode.bucketData
 		if result := bytes.Contains(nodeBucketData[:], key); result {
 			_, valueToRetrieve, _ := bytes.Cut(nodeBucketData[:], []byte("@"))
@@ -127,7 +130,7 @@ func (p *Page) DeleteBucket(key []byte) bool {
 		previousNode *CollisionBufferNode
 	)
 
-	for node.next != nil {
+	for node != nil {
 		nodeBucketData := node.bucketNode.bucketData
 		if result := bytes.Contains(nodeBucketData[:], key); result {
 			if previousNode == nil {
