@@ -27,3 +27,10 @@ type Bucket struct {
 	knucklesClock int
 }
 ```
+### Buffer Pool
+The buffer pool is implemented as an array of 3000 elements, with each element in the array representing a page and, more specifically, a single bucket. However, due to possible collisions, each page may contain a list of buckets, which degrades overall performance. <br> <br>
+It is possible to manipulate the buffer pool by adding and removing buckets through the methods provided by the BufferPool class. These methods must be invoked by the KnucklesMap class.
+Those are: 
+* WritePage
+* ReadPage
+* EvictPage, which only the paginator can call.
