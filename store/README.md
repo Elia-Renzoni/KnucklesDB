@@ -34,3 +34,10 @@ Those are:
 * WritePage
 * ReadPage
 * EvictPage, which only the paginator can call.
+### Hash Function 
+The hash function used in KnucklesDB is the 128-bit Spooky Hash; however, the produced value is converted into a 32-bit integer. <br> <br>
+To call the hash function, you can use the Hash32 method contained in the SpookyHash class.
+### Storage API
+The KnucklesMap class contains the Write and Read methods, which the server must call to handle client requests. These methods, in turn, will call the methods contained in the SpookyHash, BufferPool, and AddressBinder classes. <br> <br>
+* Set() -> WritePage() -> AddPage().
+* Get() -> ReadPage() -> ReadValueFromBucket().
