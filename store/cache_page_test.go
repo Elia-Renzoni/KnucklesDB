@@ -21,6 +21,15 @@ func TestAddPage(t *testing.T) {
 	if err != nil {
 		t.Fail()
 	}
+
+	page.AddPage([]byte("/todel"), []byte("192.66.255.255"), 0)
+	page.AddPage([]byte("/todel"), []byte("192.66.245.255"), 0)
+
+	err1, value := page.ReadValueFromBucket([]byte("/todel"))
+	t.Log(string(value))
+	if err1 != nil {
+		t.Fail()
+	}
 }
 
 func TestDeleteBucket(t *testing.T) {

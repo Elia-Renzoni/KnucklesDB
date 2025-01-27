@@ -81,19 +81,22 @@ func (p *Page) AddPage(key, value []byte, logicalClock int) {
 
 	node = newCollisionBufferNode(b)
 
-	if p.collisionList.head == nil {
-		p.collisionList.head = node
+	cheatNode, ok := checkDuplicateKeys(p.collisionList.head, key)
+	if ok {
+		cheatNode.bucketNode.bucketData = b.bucketData
+		cheatNode.knucklesClock = logicalClock
 	} else {
-		currentNode = p.collisionList.head
-		for currentNode.next != nil {
-			currentNode = currentNode.next
+		if p.collisionList.head == nil {
+			p.collisionList.head = node
+		} else {
+			currentNode = p.collisionList.head
+			for currentNode.next != nil {
+				currentNode = currentNode.next
+			}
+
+			currentNode.next = node
 		}
-
-		currentNode.next = node
 	}
-
-	
-	
 }
 
 /**
@@ -162,4 +165,28 @@ func fillBucket(key, value []byte) (preBucket [PAGE_SIZE]byte) {
 
 	copy(preBucket[:], buffer.Bytes())
 	return
+}
+
+/** 
+* 
+*	@param head of the collision linked list
+*	@param key to search
+*	@return pointer to node with the duplicate key
+*	@return result of the search operation
+*/
+func checkDuplicateKeys(head *CollisionBufferNode, key []byte) (*CollisionBufferNode, bool) {
+	var node *CollisionBufferNode = head
+
+	if node == nil {
+		return nil, false
+	} else {
+		for node != nil {
+			if result := bytes.Contains(node.bucketNode.bucketData[:], key); result {
+				return node, result
+			}
+			node = node.next
+		}
+	}
+
+	return nil, false
 }
