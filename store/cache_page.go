@@ -84,7 +84,7 @@ func (p *Page) AddPage(key, value []byte, logicalClock int) {
 	cheatNode, ok := checkDuplicateKeys(p.collisionList.head, key)
 	if ok {
 		cheatNode.bucketNode.bucketData = b.bucketData
-		cheatNode.knucklesClock = logicalClock
+		cheatNode.bucketNode.knucklesClock = logicalClock
 	} else {
 		if p.collisionList.head == nil {
 			p.collisionList.head = node
@@ -167,13 +167,13 @@ func fillBucket(key, value []byte) (preBucket [PAGE_SIZE]byte) {
 	return
 }
 
-/** 
-* 
+/**
+*
 *	@param head of the collision linked list
 *	@param key to search
 *	@return pointer to node with the duplicate key
 *	@return result of the search operation
-*/
+ */
 func checkDuplicateKeys(head *CollisionBufferNode, key []byte) (*CollisionBufferNode, bool) {
 	var node *CollisionBufferNode = head
 
