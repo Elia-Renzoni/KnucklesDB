@@ -7,18 +7,21 @@ package detector
 import (
 	"sync"
 	"time"
+	"knucklesdb/store"
 )
 
 type DetectorBuffer struct {
 	buffer     map[string]*Victim
 	bufferSize int
 	wg         *sync.WaitGroup
+	storeSingularUpdater *store.StoreSingularQeueuBuffer
 }
 
-func NewDetectorBuffer() *DetectorBuffer {
+func NewDetectorBuffer(storeQueue *store.StoreSingularQeueuBuffer) *DetectorBuffer {
 	return &DetectorBuffer{
 		buffer:     make(map[string]*Victim),
 		bufferSize: 0,
+		storeSingularUpdater: storeQueue,
 	}
 }
 
@@ -56,7 +59,14 @@ func (d *DetectorBuffer) ClockPageEviction() {
 				victim.epoch = false
 			} else {
 				// if the page is false then i can remove it
-				// TODO => singular queue buffer per gli update
+				routine := store.NewRoutine(
+					store.EVICT_PAGE,
+					victim.key,
+					[]byte(""),
+					victim.pageID,
+				)
+
+				d.storeSingularUpdater.AddToBuffer(routine)
 			}
 		}
 		d.wg.Done()
