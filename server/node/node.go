@@ -4,7 +4,6 @@ import (
 	"net"
 	id "github.com/google/uuid"
 	"encoding/json"
-	"knucklesdb/clock"
 	"knucklesdb/store"
 	"fmt"
 	"errors"
@@ -14,25 +13,22 @@ type Replica struct {
 	replicaID id.UUID 
 	address string
 	listenPort string
-	internalClock *clock.LogicalClock
-	db *store.KnucklesDB
+	kMap *store.KnucklesMap
 }
 
 type Message struct {
 	MethodType string `json:"type"`	
-	MethodName string `json:"method"`   
-	Parameter string `json:"parameter"`
-	Port int `json:"port"`
+	Key []byte `json:"key"`
+	Value []byte `json:"value,omitempty"`
 }
 
-func NewReplica(address string, port string, logicalClock *clock.LogicalClock,
-				db *store.KnucklesDB) *Replica {
+func NewReplica(address string, port string, queue *store.StoreSingularQeueuBuffer,
+	           dbMap *store.KnucklesMap) *Replica {
 	return &Replica{
 		replicaID: id.New(),
 		address: address,
 		listenPort: port,
-		internalClock: logicalClock,
-		db: db,
+		kMap: dbMap,
 	}
 }
 
@@ -59,7 +55,6 @@ func (r *Replica) handleConnection(conn net.Conn) {
 	var (
 		setErr error
 		getErr error
-		value *store.DBvalues
 		toWrite string
 		responsePayload []byte
 		msg = &Message{}
@@ -81,26 +76,17 @@ func (r *Replica) handleConnection(conn net.Conn) {
 
 	switch msg.MethodName {
 	case "set":
-		if setErr = r.handleSetRequest(msg.MethodType, msg.Parameter, msg.Port); setErr != nil {
-			responsePayload, _ = json.Marshal(map[string]string{
-				"error": setErr.Error(),
-			})
-		} else {
-			responsePayload, _ = json.Marshal(map[string]string{
-				"ack": "1",
-			})		
-		}
+		r.kMap.Set(msg.Key, msg.Value)
+		responsePayload, _ = json.Marshal(map[string]string{
+			"ack": "1",
+		})
 	case "get": 
-		if getErr, value = r.handleGetRequest(msg.MethodType, msg.Parameter); getErr != nil {
+		if getErr, value = r.kMap.Get(msg.Key); getErr != nil {
 			responsePayload, _ = json.Marshal(map[string]string{
 				"error": getErr.Error(),
 			})
 		} else {
-			if value.GetIpAddress() != nil {
-				toWrite = value.GetIpAddress().String()
-			} else {
-				toWrite = value.GetOptionalEndpoint()
-			}
+			toWrite = string(value)
 
 			responsePayload, _ = json.Marshal(map[string]string{
 				"ack": toWrite,
@@ -113,41 +99,4 @@ func (r *Replica) handleConnection(conn net.Conn) {
 	}
 
 	conn.Write(responsePayload)
-}
-
-func (r *Replica) handleSetRequest(methodType string, parameter string, port int) error {
-	switch methodType {
-	case "ip":
-		value := store.NewDBValues(net.ParseIP(parameter), port, r.internalClock.GetLogicalClock(), "")
-		r.db.SetWithIpAddressOnly(parameter, value)
-	case "end":
-		value := store.NewDBValues(nil, port, r.internalClock.GetLogicalClock(), parameter)
-		r.db.SetWithEndpointOnly(parameter, value)
-	default:
-		return errors.New("Illegal Parameterr")
-	}
-	return nil
-}
-
-func (r *Replica) handleGetRequest(methodType string, parameter string) (error, *store.DBvalues) {
-	var (
-		err error
-		value *store.DBvalues
-	)
-
-	switch methodType {
-	case "ip":
-		value, err = r.db.SearchWithIpOnly(parameter)
-		if err != nil && value == nil {
-			return err, nil
-		}
-	case "end":
-		value, err = r.db.SearchWithEndpointOnly(parameter)
-		if err != nil && value == nil {
-			return err, nil
-		}
-	default:
-		return errors.New("Illegal Parameter"), nil
-	}
-	return nil, value
 }

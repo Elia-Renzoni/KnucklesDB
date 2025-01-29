@@ -1,11 +1,9 @@
 package main
 
 import (
-	"knucklesdb/clock"
 	"knucklesdb/detector"
 	"knucklesdb/server/node"
 	"knucklesdb/store"
-	"sync"
 	"time"
 	"flag"
 	"fmt"

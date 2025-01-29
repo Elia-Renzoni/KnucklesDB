@@ -14,14 +14,14 @@ type DetectorBuffer struct {
 	buffer     map[string]*Victim
 	bufferSize int
 	wg         *sync.WaitGroup
-	storeSingularUpdater *store.StoreSingularQeueuBuffer
+	bPool *store.BufferPool
 }
 
-func NewDetectorBuffer(storeQueue *store.StoreSingularQeueuBuffer) *DetectorBuffer {
+func NewDetectorBuffer(bPool *store.BufferPool) *DetectorBuffer {
 	return &DetectorBuffer{
 		buffer:     make(map[string]*Victim),
 		bufferSize: 0,
-		storeSingularUpdater: storeQueue,
+		bPool: pool,
 	}
 }
 
@@ -59,14 +59,7 @@ func (d *DetectorBuffer) ClockPageEviction() {
 				victim.epoch = false
 			} else {
 				// if the page is false then i can remove it
-				routine := store.NewRoutine(
-					store.EVICT_PAGE,
-					victim.key,
-					[]byte(""),
-					victim.pageID,
-				)
-
-				d.storeSingularUpdater.AddToBuffer(routine)
+				d.bPool.EvictPage(victim.pageID, victim.key)
 			}
 		}
 		d.wg.Done()

@@ -9,6 +9,7 @@ package store
 import (
 	"bytes"
 	"errors"
+	"sync"
 )
 
 const (
@@ -28,6 +29,10 @@ type Page struct {
 
 	// linked list
 	collisionList *CollisionBuffer
+
+
+	// mutual ex.
+	mutex sync.Mutex
 }
 
 type Bucket struct {
@@ -76,6 +81,9 @@ func (p *Page) AddPage(key, value []byte, logicalClock int) {
 		node, currentNode *CollisionBufferNode
 	)
 
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
 	b.bucketData = fillBucket(key, value)
 	b.knucklesClock = logicalClock
 
@@ -110,6 +118,9 @@ func (p *Page) ReadValueFromBucket(key []byte) (error, []byte) {
 		node *CollisionBufferNode = p.collisionList.head
 	)
 
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
 	for node != nil {
 		nodeBucketData := node.bucketNode.bucketData
 		if result := bytes.Contains(nodeBucketData[:], key); result {
@@ -132,6 +143,9 @@ func (p *Page) DeleteBucket(key []byte) bool {
 		node         *CollisionBufferNode = p.collisionList.head
 		previousNode *CollisionBufferNode
 	)
+
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
 
 	for node != nil {
 		nodeBucketData := node.bucketNode.bucketData
