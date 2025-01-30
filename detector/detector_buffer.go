@@ -60,7 +60,8 @@ func (d *DetectorBuffer) ClockPageEviction() {
 				victim.epoch = false
 			} else {
 				// if the page is false then i can remove it
-				d.bPool.EvictPage(victim.pageID, victim.key)
+				delete(d.buffer, string(victim.key))
+				//d.bPool.EvictPage(victim.pageID, victim.key)
 			}
 		}
 		d.wg.Done()
