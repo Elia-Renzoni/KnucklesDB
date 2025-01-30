@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"knucklesdb/store"
 	"fmt"
-	"errors"
 )
 
 type Replica struct {
@@ -22,8 +21,7 @@ type Message struct {
 	Value []byte `json:"value,omitempty"`
 }
 
-func NewReplica(address string, port string, queue *store.StoreSingularQeueuBuffer,
-	           dbMap *store.KnucklesMap) *Replica {
+func NewReplica(address string, port string, dbMap *store.KnucklesMap) *Replica {
 	return &Replica{
 		replicaID: id.New(),
 		address: address,
@@ -53,9 +51,9 @@ func (r *Replica) Start() {
 
 func (r *Replica) handleConnection(conn net.Conn) {
 	var (
-		setErr error
 		getErr error
-		toWrite string
+		//toWrite string
+		value []byte
 		responsePayload []byte
 		msg = &Message{}
 	)
@@ -74,7 +72,7 @@ func (r *Replica) handleConnection(conn net.Conn) {
 		fmt.Printf("\n%v\n", err)
 	}
 
-	switch msg.MethodName {
+	switch msg.MethodType {
 	case "set":
 		r.kMap.Set(msg.Key, msg.Value)
 		responsePayload, _ = json.Marshal(map[string]string{
@@ -86,10 +84,10 @@ func (r *Replica) handleConnection(conn net.Conn) {
 				"error": getErr.Error(),
 			})
 		} else {
-			toWrite = string(value)
+			//toWrite = string(value)
 
-			responsePayload, _ = json.Marshal(map[string]string{
-				"ack": toWrite,
+			responsePayload, _ = json.Marshal(map[string][]byte{
+				"ack": value,
 			})
 		}
 	default:

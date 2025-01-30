@@ -13,15 +13,16 @@ import (
 type DetectorBuffer struct {
 	buffer     map[string]*Victim
 	bufferSize int
-	wg         *sync.WaitGroup
+	wg         sync.WaitGroup
 	bPool *store.BufferPool
 }
 
-func NewDetectorBuffer(bPool *store.BufferPool) *DetectorBuffer {
+func NewDetectorBuffer(bPool *store.BufferPool, wg sync.WaitGroup) *DetectorBuffer {
 	return &DetectorBuffer{
 		buffer:     make(map[string]*Victim),
 		bufferSize: 0,
-		bPool: pool,
+		wg: wg,
+		bPool: bPool,
 	}
 }
 

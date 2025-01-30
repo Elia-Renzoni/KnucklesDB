@@ -4,6 +4,8 @@ import (
 	"time"
 	"net"
 	"fmt"
+	_"encoding/json"
+	_"math/rand"
 )
 
 
@@ -16,8 +18,12 @@ func main() {
 			break
 		}
 
-		time.Sleep(time.Second)
-		conn.Write([]byte(`{"type": "ip","method": "set","parameter": "192.89.12.3","port": 5050}`))
+		/*rand.Seed(time.Now().UnixNano())
+		randomIPAddr := fmt.Sprintf("%d.%d.%d.%d", rand.Intn(256), rand.Intn(256), rand.Intn(256), rand.Intn(256))*/
+		
+
+		time.Sleep(10 * time.Second)
+		conn.Write([]byte(`{"type": "set", "key": "/foo", "value": "bar"}`))
 
 		reply := make([]byte, 2024)
 		n, _ := conn.Read(reply)
