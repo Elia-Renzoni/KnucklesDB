@@ -61,3 +61,16 @@ func (k *KnucklesMap) Get(key []byte) (error, []byte) {
 	err, value := k.bufferPool.ReadPage(int(pageID), key)
 	return err, value
 }
+
+
+func (k *KnucklesMap) EvictPage(key []byte) bool {
+	var (
+		hash uint32
+		pageID uint32
+	)
+
+	hash = k.hasher.Hash32(key)
+	pageID = k.addressTranslator.TranslateHash(hash)
+	result := k.bufferPool.EvictPage(pageID, key)
+	return result
+}

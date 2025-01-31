@@ -6,9 +6,7 @@ import (
 	"fmt"
 )
 
-
 func main() {
-
 	for {
 		conn, err := net.Dial("tcp", "127.0.0.1:5050")
 		if err != nil {
@@ -25,6 +23,4 @@ func main() {
 
 		conn.Close()
 	}
-	
-
 }
