@@ -6,7 +6,7 @@
 *  channel [][][][][][][][][] <- reader -> buffer
  */
 
-package detector
+package store
 
 type SingularUpdateQueue struct {
 	updateQueue    chan *Victim

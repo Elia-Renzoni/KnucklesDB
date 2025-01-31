@@ -4,7 +4,7 @@
 *
 **/
 
-package detector
+package store
 
 type Victim struct {
 	epoch  bool

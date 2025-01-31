@@ -2,7 +2,6 @@ package main
 
 import (
 	"sync"
-	"knucklesdb/detector"
 	"knucklesdb/server/node"
 	"knucklesdb/store"
 	"flag"
@@ -17,11 +16,11 @@ func main() {
 	bufferPool := store.NewBufferPool()
 	addressBind := store.NewAddressBinder()
 	hashAlgorithm := store.NewSpookyHash(1)
-	replica := node.NewReplica(*host, *port, storeMap)
 
-	failureDetector := detector.NewDetectorBuffer(bufferPool, wg)
-	updateQueue := detector.NewSingularUpdateQueue(failureDetector)
+	failureDetector := store.NewDetectorBuffer(bufferPool, wg)
+	updateQueue := store.NewSingularUpdateQueue(failureDetector)
 	storeMap := store.NewKnucklesMap(bufferPool, addressBind, hashAlgorithm, updateQueue)
+	replica := node.NewReplica(*host, *port, storeMap)
 
 	go failureDetector.ClockPageEviction()
 	go updateQueue.UpdateQueueReader()

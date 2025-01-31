@@ -22,7 +22,7 @@ func main() {
 		randomIPAddr := fmt.Sprintf("%d.%d.%d.%d", rand.Intn(256), rand.Intn(256), rand.Intn(256), rand.Intn(256))*/
 		
 
-		time.Sleep(10 * time.Second)
+		time.Sleep(1 * time.Second)
 		conn.Write([]byte(`{"type": "set", "key": "/foo", "value": "bar"}`))
 
 		reply := make([]byte, 2024)

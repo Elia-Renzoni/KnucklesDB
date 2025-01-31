@@ -2,27 +2,27 @@
 *	This file contains the implementation of the clock page replacement algorithm.
 *
 **/
-package detector
+package store
 
 import (
 	"sync"
 	"time"
-	"knucklesdb/store"
 )
 
 type DetectorBuffer struct {
 	buffer     map[string]*Victim
 	bufferSize int
 	wg         sync.WaitGroup
-	bPool *store.BufferPool
+	//commApi *api.API
+	bufferPool *BufferPool
 }
 
-func NewDetectorBuffer(bPool *store.BufferPool, wg sync.WaitGroup) *DetectorBuffer {
+func NewDetectorBuffer(bPool *BufferPool, wg sync.WaitGroup) *DetectorBuffer {
 	return &DetectorBuffer{
 		buffer:     make(map[string]*Victim),
 		bufferSize: 0,
 		wg: wg,
-		bPool: bPool,
+		bufferPool: bPool,
 	}
 }
 
@@ -60,7 +60,8 @@ func (d *DetectorBuffer) ClockPageEviction() {
 				victim.epoch = false
 			} else {
 				// if the page is false then i can remove it
-				d.bPool.EvictPage(victim.pageID, victim.key)
+				//d.commApi.EvictPage(victim.pageID, victim.key)
+				d.bufferPool.EvictPage(victim.pageID, victim.key)
 			}
 		}
 		d.wg.Done()
