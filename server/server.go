@@ -17,11 +17,11 @@ func main() {
 	bufferPool := store.NewBufferPool()
 	addressBind := store.NewAddressBinder()
 	hashAlgorithm := store.NewSpookyHash(1)
-	storeMap := store.NewKnucklesMap(bufferPool, addressBind, hashAlgorithm)
 	replica := node.NewReplica(*host, *port, storeMap)
 
 	failureDetector := detector.NewDetectorBuffer(bufferPool, wg)
 	updateQueue := detector.NewSingularUpdateQueue(failureDetector)
+	storeMap := store.NewKnucklesMap(bufferPool, addressBind, hashAlgorithm, updateQueue)
 
 	go failureDetector.ClockPageEviction()
 	go updateQueue.UpdateQueueReader()

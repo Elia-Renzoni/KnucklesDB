@@ -6,6 +6,11 @@
 
 package store
 
+import (
+	"knucklesdb/detector"
+)
+
+
 type KnucklesMap struct {
 	// current size of the main data structure
 	size uint32
@@ -18,14 +23,18 @@ type KnucklesMap struct {
 
 	// pointer to the hash function implementation
 	hasher *SpookyHash
+
+	// singular update queue entry 
+	updateQueue *detector.SingularUpdateQueue
 }
 
-func NewKnucklesMap(bPool *BufferPool, t *AddressBinder, h *SpookyHash) *KnucklesMap {
+func NewKnucklesMap(bPool *BufferPool, t *AddressBinder, h *SpookyHash, queue *detector.SingularUpdateQueue) *KnucklesMap {
 	return &KnucklesMap{
 		size:              0,
 		bufferPool:        bPool,
 		addressTranslator: t,
 		hasher:            h,
+		updateQueue: queue,
 	}
 }
 
@@ -43,6 +52,7 @@ func (k *KnucklesMap) Set(key []byte, value []byte) {
 	hash = k.hasher.Hash32(key)
 	pageID = k.addressTranslator.TranslateHash(hash)
 	k.bufferPool.WritePage(int(pageID), key, value, 0)
+	k.updateQueue.AddVictimPage(detector.NewVictim(key, pageID))
 }
 
 /**
@@ -61,6 +71,7 @@ func (k *KnucklesMap) Get(key []byte) (error, []byte) {
 	err, value := k.bufferPool.ReadPage(int(pageID), key)
 	return err, value
 }
+
 
 
 func (k *KnucklesMap) EvictPage(key []byte) bool {
