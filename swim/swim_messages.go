@@ -14,5 +14,5 @@ type DetectionMessage struct {
 
 // this message will be received as a ACK 
 type AckMessage struct {
-	ackContent bool `json:"ack,omitempty"`	
+	ackContent int `json:"ack,omitempty"`	
 }
