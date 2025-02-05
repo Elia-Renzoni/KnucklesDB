@@ -1,3 +1,9 @@
+/*
+*
+*
+*
+**/
+
 package swim
 
 import (
@@ -5,6 +11,8 @@ import (
 )
 
 type ClusterManager struct {
+	// this field contains a list of nodes
+	// that have joined the cluster.
 	clusterMetadata []*Node
 	// TODO -> gossip field...
 }
@@ -16,6 +24,9 @@ func NewClusterManager() *ClusterManager {
 	}
 }
 
+/*
+*	@brief this method will be called by the new nodes to join the cluster.
+**/
 func (c *ClusterManager) JoinCluster(address net.IP, port int) {
 	n := NewNode(address, port, STATUS_ALIVE)
 	c.clusterMetadata = append(c.clusterMetadata, n)
