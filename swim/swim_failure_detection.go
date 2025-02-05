@@ -33,11 +33,11 @@ func NewSWIMFailureDetector(nodes *ClusterManager, helperNodes int, sleepTime, t
 	}
 }
 
-func (s *SWIMFailureDetector) SendPing() {
+func (s *SWIMFailureDetector) sendPing() {
 
 }
 
-func (s *SWIMFailureDetector) PiggyBack() {
+func (s *SWIMFailureDetector) piggyBack() {
 
 }
 
