@@ -1,8 +1,12 @@
 package swim
 
+import (
+	"net"
+)
+
 type ClusterManager struct {
 	clusterMetadata []*Node
-	// gossip...
+	// TODO -> gossip field...
 }
 
 
@@ -12,6 +16,9 @@ func NewClusterManager() *ClusterManager {
 	}
 }
 
-func (c *ClusterManager) JoinCluster() {
+func (c *ClusterManager) JoinCluster(address net.IP, port int) {
+	n := NewNode(address, port, STATUS_ALIVE)
+	c.clusterMetadata = append(c.clusterMetadata, n)
 
+	// TODO -> start gossip cycle
 }
