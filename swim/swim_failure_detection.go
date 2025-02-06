@@ -8,8 +8,6 @@
 *	if the response goes timeout then the parent goroutine will schedule a child one.
 *	The child goroutine will handle the piggybacks.
 */
-
-
 package swim
 
 import (
@@ -37,8 +35,8 @@ func NewSWIMFailureDetector(nodes *ClusterManager, marshaler *ProtocolMarshaer, 
 	}
 }
 
-func (s *SWIMFailureDetector) sendPing(kNodeHost string, kNodeListenPort int) {
-	joined := net.JoinHostPort(kNodeHost, kNodeListenPort)
+func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
+	joined := net.JoinHostPort(nodeHost, nodeListenPort)
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, s.timeoutTime)
 	defer cancel()
