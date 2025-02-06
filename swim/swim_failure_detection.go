@@ -13,28 +13,54 @@
 package swim
 
 import (
-	_"net"
+	"net"
 	"time"
+	"context"
 )
 
 type SWIMFailureDetector struct {
 	nodesList *ClusterManager
+	marshaler *ProtocolMarshaer
+	swimMessageAck AckMessage
 	kHelperNodes int
-	swimSchedule time.Time
-	timeoutTime time.Time
+	swimSchedule time.Duration
+	timeoutTime time.Duration
 }
 
-func NewSWIMFailureDetector(nodes *ClusterManager, helperNodes int, sleepTime, timeoutBoundaries time.Time) *SWIMFailureDetector {
+func NewSWIMFailureDetector(nodes *ClusterManager, marshaler *ProtocolMarshaer, helperNodes int, sleepTime, timeoutBoundaries time.Duration) *SWIMFailureDetector {
 	return &SWIMFailureDetector{
 		nodesList: nodes,
+		marshaler: marshaler,
 		kHelperNodes: helperNodes,
 		swimSchedule: sleepTime,
 		timeoutTime: timeoutBoundaries,
 	}
 }
 
-func (s *SWIMFailureDetector) sendPing() {
+func (s *SWIMFailureDetector) sendPing(kNodeHost string, kNodeListenPort int) {
+	joined := net.JoinHostPort(kNodeHost, kNodeListenPort)
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, s.timeoutTime)
+	defer cancel()
 
+	conn, err := net.DialContext(ctx, "tcp", joined)
+	defer conn.Close()
+
+	if err != nil {
+		// do something...
+	}
+
+	jsonValue, _ := s.marshaler.MarshalPing()
+	conn.Write(jsonValue)
+
+	replyData := make([]byte, 2040)
+	count, _ := conn.Read(reply)
+	json.Unmarshal(replyData[:count], &s.swimMessageAck)
+
+	select {
+	case <- ctx.Done():
+		// do something...
+	}
 }
 
 func (s *SWIMFailureDetector) piggyBack() {
