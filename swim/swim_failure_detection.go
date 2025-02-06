@@ -13,7 +13,7 @@
 package swim
 
 import (
-	"net"
+	_"net"
 	"time"
 )
 

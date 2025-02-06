@@ -21,7 +21,7 @@ func (p *ProtocolMarshaer) MarshalPing() ([]byte, error) {
 	)
 
 	encodedPingMessage, err = json.Marshal(map[string]string{
-		"ping": 0,
+		"ping": "0",
 	})
 
 	return encodedPingMessage, err
@@ -37,7 +37,7 @@ func (p *ProtocolMarshaer) MarshalPiggyBack(parentNode, targetNode string) ([]by
 	encodedMessage, err = json.Marshal(map[string]string{
 		"node": parentNode,
 		"target": targetNode,
-		"ping": 0,
+		"ping": "0",
 	})
 
 	return encodedMessage, err
@@ -49,7 +49,7 @@ func (p *ProtocolMarshaer) MarshalSWIMDetectionMessage(nodeStatus, listenPort in
 		err error
 	)
 
-	encodedSWIMMessage, err = json.Marshal(map[string]string{
+	encodedSWIMMessage, err = json.Marshal(map[string]interface{}{
 		"swim": nodeStatus,
 		"nodeID": nodeID,
 		"port": listenPort,
