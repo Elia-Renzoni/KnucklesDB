@@ -67,6 +67,10 @@ func (s *SWIMFailureDetector) piggyBack() {
 
 }
 
+func (s *SWIMFailureDetector) changeNodeState() {
+
+}
+
 // this method represent the goroutine that has to be called
 // by the server
 func (s *SWIMFailureDetector) ClusterFailureDetection() {
