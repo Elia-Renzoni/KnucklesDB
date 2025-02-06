@@ -25,7 +25,8 @@ type SWIMFailureDetector struct {
 	timeoutTime time.Duration
 }
 
-func NewSWIMFailureDetector(nodes *ClusterManager, marshaler *ProtocolMarshaer, helperNodes int, sleepTime, timeoutBoundaries time.Duration) *SWIMFailureDetector {
+func NewSWIMFailureDetector(nodes *ClusterManager, marshaler *ProtocolMarshaer, helperNodes int, 
+	                       sleepTime, timeoutBoundaries time.Duration) *SWIMFailureDetector {
 	return &SWIMFailureDetector{
 		nodesList: nodes,
 		marshaler: marshaler,
