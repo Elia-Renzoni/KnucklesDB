@@ -63,14 +63,17 @@ func (c *ClusterManager) IsSeed(address string, port int) (bool, error) {
 	}
 
 	fileData := make([]byte, 1000)
-	count, _ := yamlSeedNodeFile.Read(fileData)
+	count, errRead := yamlSeedNodeFile.Read(fileData)
+	if errRead != nil {
+		return false, errRead
+	}
 
 	err = yaml.Unmarshal(fileData[:count], &seedNodeInfo)
 	if err != nil {
 		return false, err
 	}
 
-	fmt.Printf("%s - %d", seedNodeInfo.seedNodeAddress, seedNodeInfo.seedNodeListenPort)
+	fmt.Printf("%x - %x", seedNodeInfo.seedNodeAddress, seedNodeInfo.seedNodeListenPort)
 	
 	if seedNodeInfo.seedNodeAddress == address && seedNodeInfo.seedNodeListenPort == port {
 		return true, nil
