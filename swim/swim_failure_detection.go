@@ -18,11 +18,22 @@ import (
 )
 
 type SWIMFailureDetector struct {
+	
+	// used for the cluster metadata list
 	nodesList *ClusterManager
+	
+	// message marshaler
 	marshaler *ProtocolMarshaer
 	swimMessageAck AckMessage
+	
+	// number of the K helper nodes to use
+	// during the piggyback session
 	kHelperNodes int
+	
+	// time for scheduling the swim protocol session
 	swimSchedule time.Duration
+	
+	// timeout time
 	timeoutTime time.Duration
 }
 
@@ -37,6 +48,11 @@ func NewSWIMFailureDetector(nodes *ClusterManager, marshaler *ProtocolMarshaer, 
 	}
 }
 
+/*
+*	@brief this method send a ping to the target node
+*	@param IP address of the target node
+*	@param listen port of the target node
+*/
 func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
 	joined := net.JoinHostPort(nodeHost, nodeListenPort)
 	ctx := context.Background()
@@ -56,6 +72,7 @@ func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
 	replyData := make([]byte, 2040)	
 
 	select {
+	// timeout occured
 	case <- ctx.Done():
 		s.changeNodeState(nodeHost, STATUS_SUSPICIOUS)
 		// TODO -> start a gossip cycle
@@ -66,6 +83,12 @@ func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
 	}
 }
 
+/*
+*	@brief this method implements the piggy back logics of the swim protocol
+*	the parent node sends to the K helper nodes (chosed randomly) a message
+*	indicating ther target node to ping.
+*	@param target address and listen port
+*/
 func (s *SWIMFailureDetector) piggyBack(targetInfo string) {	
 	if len(s.nodesList.clusterMetadata) < s.helperNodes {
 		// TODO -> write error in the WAL
@@ -76,15 +99,25 @@ func (s *SWIMFailureDetector) piggyBack(targetInfo string) {
 
 		for i := 0; i < s.kHelperNodes; i++ {
 			randomKHelperNode := rand.Intn(s.kHelperNodes + 1)
+			
+			// select the K node
 			helperNode := s.nodesList.clusterMetadata[randomKHelperNode]
+			
 			piggy := s.pingPiggyBack()
+			
+			// send the piggyback message indicating the target node address and the
+			// parent address
 			result := piggy(helperNode.nodeAddress.String(), helperNode.nodeListenPort, joined)
+			
+			// store the result of the piggyback operation
 			helperResponses = append(helperResponses, result)
 		}
 
 		host, _, _ := net.SplitHostPort(targetInfo)
 
 		for _, result := range helperResponses {
+			// if there is just only a 1 in the results
+			// the target node is considered alive
 			if result == 1 {
 				s.changeNodeState(host, STATUS_ALIVE)
 				eliminationCondition = false
@@ -92,6 +125,8 @@ func (s *SWIMFailureDetector) piggyBack(targetInfo string) {
 			}
 		}
 
+		// if every result are made of 0 then
+		// the target node must be considered removed
 		if eliminationCondition {
 			s.changeNodeState(host, STATUS_REMOVED)
 		}
