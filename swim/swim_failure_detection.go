@@ -130,10 +130,6 @@ func (s *SWIMFailureDetector) pingPiggyBack() func(string, int, string) int {
 	}
 }
 
-func (s *SWIMFailureDetector) replyToPing() {
-
-}
-
 func (s *SWIMFailureDetector) changeNodeState(nodeHost string, nodeUpdatedStatus int) {
 	// search and get the node
 	for _, node := range s.nodesList.clusterMetadata {
