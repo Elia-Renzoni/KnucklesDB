@@ -7,6 +7,7 @@ package swim
 // this message will be send over gossip by each nodes that
 // pings the cluster
 type DetectionMessage struct {
+	MethodType    string `json:"type"`
 	Status        int    `json:"swim"`
 	NodeID        string `json:"nodeID"`
 	NodeListePort int    `json:"port"`

@@ -8,19 +8,20 @@ import (
 	"encoding/json"
 )
 
-type ProtocolMarshaer struct {}
+type ProtocolMarshaer struct{}
 
-func NewProtocolMarshaler() *ProtocolMarshaer{
+func NewProtocolMarshaler() *ProtocolMarshaer {
 	return &ProtocolMarshaer{}
 }
 
 func (p *ProtocolMarshaer) MarshalPing() ([]byte, error) {
 	var (
 		encodedPingMessage []byte
-		err error
+		err                error
 	)
 
 	encodedPingMessage, err = json.Marshal(map[string]any{
+		"type": "ping",
 		"ping": 0,
 	})
 
@@ -28,16 +29,17 @@ func (p *ProtocolMarshaer) MarshalPing() ([]byte, error) {
 }
 
 // the parentNode indicate the node who can't reach the target node
-func (p *ProtocolMarshaer) MarshalPiggyBack(parentNode, targetNode string) ([]byte, error){
+func (p *ProtocolMarshaer) MarshalPiggyBack(parentNode, targetNode string) ([]byte, error) {
 	var (
 		encodedMessage []byte
-		err error 
+		err            error
 	)
 
 	encodedMessage, err = json.Marshal(map[string]any{
-		"node": parentNode,
+		"type":   "piggyback",
+		"node":   parentNode,
 		"target": targetNode,
-		"ping": 0,
+		"ping":   0,
 	})
 
 	return encodedMessage, err
@@ -46,13 +48,14 @@ func (p *ProtocolMarshaer) MarshalPiggyBack(parentNode, targetNode string) ([]by
 func (p *ProtocolMarshaer) MarshalSWIMDetectionMessage(nodeStatus, listenPort int, nodeID string) ([]byte, error) {
 	var (
 		encodedSWIMMessage []byte
-		err error
+		err                error
 	)
 
 	encodedSWIMMessage, err = json.Marshal(map[string]any{
-		"swim": nodeStatus,
+		"type":   "swim",
+		"swim":   nodeStatus,
 		"nodeID": nodeID,
-		"port": listenPort,
+		"port":   listenPort,
 	})
 
 	return encodedSWIMMessage, err
