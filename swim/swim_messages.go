@@ -4,6 +4,13 @@
 **/
 package swim
 
+type PiggyBackMessage struct {
+	MethodType string `json:"type"`
+	ParentNode string `json:"node"`
+	TargetNode string `json:"target"`
+	PingValue  int    `json:"ping"`
+}
+
 // this message will be send over gossip by each nodes that
 // pings the cluster
 type DetectionMessage struct {

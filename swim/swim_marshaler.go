@@ -60,3 +60,16 @@ func (p *ProtocolMarshaer) MarshalSWIMDetectionMessage(nodeStatus, listenPort in
 
 	return encodedSWIMMessage, err
 }
+
+func (p *ProtocolMarshaer) MarshalAckMessage(ackResultValue int) ([]byte, error) {
+	var (
+		encodedAckMessage []byte
+		err               error
+	)
+
+	encodedAckMessage, err = json.Marshal(map[string]any{
+		"ack": ackResultValue,
+	})
+
+	return encodedAckMessage, err
+}
