@@ -1,15 +1,16 @@
 /*
 *	This file contains the implementation of the membership protocol.
-*	through which nodes can join the cluster	
+*	through which nodes can join the cluster
 *
 **/
 package swim
 
 import (
+	"fmt"
 	"net"
 	"os"
+
 	"gopkg.in/yaml.v3"
-	"fmt"
 )
 
 type ClusterManager struct {
@@ -20,10 +21,9 @@ type ClusterManager struct {
 }
 
 type SeedNodeMetadata struct {
-	seedNodeAddress string `yaml:"seed_address"`
-	seedNodeListenPort int `yaml:"seed_listen_port"`
+	SeedNodeAddress    string `yaml:"seed_address"`
+	SeedNodeListenPort int    `yaml:"seed_listen_port"`
 }
-
 
 func NewClusterManager() *ClusterManager {
 	return &ClusterManager{
@@ -51,8 +51,8 @@ func (c *ClusterManager) JoinCluster(address net.IP, port int) {
 func (c *ClusterManager) IsSeed(address string, port int) (bool, error) {
 	var (
 		yamlSeedNodeFile *os.File
-		err error
-		seedNodeInfo SeedNodeMetadata
+		err              error
+		seedNodeInfo     SeedNodeMetadata
 	)
 
 	yamlSeedNodeFile, err = os.Open("join.yaml")
@@ -73,9 +73,9 @@ func (c *ClusterManager) IsSeed(address string, port int) (bool, error) {
 		return false, err
 	}
 
-	fmt.Printf("%x - %x", seedNodeInfo.seedNodeAddress, seedNodeInfo.seedNodeListenPort)
-	
-	if seedNodeInfo.seedNodeAddress == address && seedNodeInfo.seedNodeListenPort == port {
+	fmt.Printf("%s - %d", seedNodeInfo.SeedNodeAddress, seedNodeInfo.SeedNodeListenPort)
+
+	if seedNodeInfo.SeedNodeAddress == address && seedNodeInfo.SeedNodeListenPort == port {
 		return true, nil
 	}
 
