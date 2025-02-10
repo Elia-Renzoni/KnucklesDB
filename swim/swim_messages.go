@@ -13,6 +13,8 @@ type DetectionMessage struct {
 }
 
 // this message will be received as a ACK 
+// if ackContent is 0 then the target node is not alive
+// if ackContent is 1 then the target node i alive
 type AckMessage struct {
 	ackContent int `json:"ack,omitempty"`	
 }
