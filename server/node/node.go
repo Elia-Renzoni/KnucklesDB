@@ -1,40 +1,49 @@
 package node
 
 import (
-	"net"
-	id "github.com/google/uuid"
 	"encoding/json"
-	"knucklesdb/store"
 	"fmt"
+	"knucklesdb/store"
+	"knucklesdb/swim"
+	"net"
+
+	id "github.com/google/uuid"
 )
 
 type Replica struct {
-	replicaID id.UUID 
-	address string
-	listenPort string
-	kMap *store.KnucklesMap
+	replicaID        id.UUID
+	address          string
+	listenPort       string
+	kMap             *store.KnucklesMap
+	protocolMessages SwimProtocolMessages
+}
+
+type SwimProtocolMessages struct {
+	PiggyBackMsg        swim.PiggyBackMessage
+	FailureDetectionMsg swim.DetectionMessage
 }
 
 type Message struct {
-	MethodType string `json:"type"`	
-	Key []byte `json:"key"`
-	Value []byte `json:"value,omitempty"`
+	MethodType string `json:"type"`
+	Key        []byte `json:"key"`
+	Value      []byte `json:"value,omitempty"`
 }
 
 func NewReplica(address string, port string, dbMap *store.KnucklesMap) *Replica {
 	return &Replica{
-		replicaID: id.New(),
-		address: address,
+		replicaID:  id.New(),
+		address:    address,
 		listenPort: port,
-		kMap: dbMap,
+		kMap:       dbMap,
 	}
 }
 
 func (r *Replica) Start() {
 	ln, err := net.Listen("tcp", net.JoinHostPort(r.address, r.listenPort))
 	if err != nil {
+		// TODO -> write error message in the WAL
 		fmt.Printf("In the replica %s occurred %v", r.replicaID.String(), err)
-	}	
+	}
 
 	fmt.Printf("Server Listening...\n")
 
@@ -42,50 +51,61 @@ func (r *Replica) Start() {
 		conn, err := ln.Accept()
 
 		if err != nil {
+			// TODO -> write error message in WAL
 			fmt.Printf("%v", err)
 		}
 
-		go r.handleConnection(conn)
+		r.serveRequest(conn)
 	}
 }
 
-func (r *Replica) handleConnection(conn net.Conn) {
+func (r *Replica) serveRequest(conn net.Conn) {
 	var (
-		getErr error
-		//toWrite string
-		value []byte
+		buffer []byte
+		msg    = &Message{}
+	)
+
+	buffer = make([]byte, 2040)
+	n, err := conn.Read(buffer)
+	if err != nil {
+		// TODO -> write error message in WAL
+		fmt.Printf("%v", err)
+	}
+
+	if err := json.Unmarshal(buffer[:n], msg); err != nil {
+		// TODO -> write to WAL
+		fmt.Printf("%v\n", err)
+	} else {
+		switch msg.MethodType {
+		case "swim", "ping", "piggyback":
+			r.handleSWIMProtocolConnection(conn, buffer, msg.MethodType)
+		default:
+			go r.handleConnection(conn, msg)
+		}
+	}
+}
+
+func (r *Replica) handleConnection(conn net.Conn, message *Message) {
+	var (
+		getErr          error
+		value           []byte
 		responsePayload []byte
-		msg = &Message{}
 	)
 
 	defer conn.Close()
 
-	messageBuffer := make([]byte, 2024)
-	n, err := conn.Read(messageBuffer)
-	if err != nil {
-		fmt.Printf("%v", err)
-	}
-
-	fmt.Printf(string(messageBuffer[:n]))
-
-	if err := json.Unmarshal(messageBuffer[:n], msg); err != nil {
-		fmt.Printf("\n%v\n", err)
-	}
-
-	switch msg.MethodType {
+	switch message.MethodType {
 	case "set":
-		r.kMap.Set(msg.Key, msg.Value)
+		r.kMap.Set(message.Key, message.Value)
 		responsePayload, _ = json.Marshal(map[string]string{
 			"ack": "1",
 		})
-	case "get": 
-		if getErr, value = r.kMap.Get(msg.Key); getErr != nil {
+	case "get":
+		if getErr, value = r.kMap.Get(message.Key); getErr != nil {
 			responsePayload, _ = json.Marshal(map[string]string{
 				"error": getErr.Error(),
 			})
 		} else {
-			//toWrite = string(value)
-
 			responsePayload, _ = json.Marshal(map[string][]byte{
 				"ack": value,
 			})
@@ -97,4 +117,28 @@ func (r *Replica) handleConnection(conn net.Conn) {
 	}
 
 	conn.Write(responsePayload)
+}
+
+func (r *Replica) handleSWIMProtocolConnection(conn net.Conn, buffer []byte, methodType string) {
+
+	switch methodType {
+	case "swim":
+		r.HandleSWIMFailureDetectionMessage(conn, buffer)
+	case "ping":
+		r.HandleSWIMPingMessage(conn, buffer)
+	case "piggyback":
+		r.HandlePiggyBackSWIMMessage(conn, buffer)
+	}
+}
+
+func (r *Replica) HandleSWIMPingMessage(conn net.Conn, buffer []byte) {
+
+}
+
+func (r *Replica) HandlePiggyBackSWIMMessage(conn net.Conn, buffer []byte) {
+
+}
+
+func (r *Replica) HandleSWIMFailureDetectionMessage(conn net.Conn, buffer []byte) {
+
 }
