@@ -6,7 +6,8 @@ import (
 	"knucklesdb/store"
 	"knucklesdb/swim"
 	"net"
-
+	"context"
+	"time"
 	id "github.com/google/uuid"
 )
 
@@ -16,6 +17,8 @@ type Replica struct {
 	listenPort       string
 	kMap             *store.KnucklesMap
 	protocolMessages SwimProtocolMessages
+	timeoutTime time.Duration
+	swimMarshaler *swim.ProtocolMarshaer
 }
 
 type SwimProtocolMessages struct {
@@ -29,12 +32,15 @@ type Message struct {
 	Value      []byte `json:"value,omitempty"`
 }
 
-func NewReplica(address string, port string, dbMap *store.KnucklesMap) *Replica {
+func NewReplica(address string, port string, dbMap *store.KnucklesMap, timeout time.Duration,
+	           marshaler *swim.ProtocolMarshaer) *Replica {
 	return &Replica{
 		replicaID:  id.New(),
 		address:    address,
 		listenPort: port,
 		kMap:       dbMap,
+		timeoutTime: timeout,
+		swimMarshaler: marshaler,
 	}
 }
 
@@ -78,7 +84,7 @@ func (r *Replica) serveRequest(conn net.Conn) {
 	} else {
 		switch msg.MethodType {
 		case "swim", "ping", "piggyback":
-			r.handleSWIMProtocolConnection(conn, buffer, msg.MethodType)
+			r.handleSWIMProtocolConnection(conn, buffer, msg.MethodType, n)
 		default:
 			go r.handleConnection(conn, msg)
 		}
@@ -119,26 +125,64 @@ func (r *Replica) handleConnection(conn net.Conn, message *Message) {
 	conn.Write(responsePayload)
 }
 
-func (r *Replica) handleSWIMProtocolConnection(conn net.Conn, buffer []byte, methodType string) {
-
+func (r *Replica) handleSWIMProtocolConnection(conn net.Conn, buffer []byte, methodType string, countBuffer int) {
 	switch methodType {
 	case "swim":
-		r.HandleSWIMFailureDetectionMessage(conn, buffer)
+		r.HandleSWIMFailureDetectionMessage(conn, buffer, countBuffer)
 	case "ping":
-		r.HandleSWIMPingMessage(conn, buffer)
+		r.HandleSWIMPingMessage(conn, buffer, countBuffer)
 	case "piggyback":
-		r.HandlePiggyBackSWIMMessage(conn, buffer)
+		r.HandlePiggyBackSWIMMessage(conn, buffer, countBuffer)
 	}
 }
 
-func (r *Replica) HandleSWIMPingMessage(conn net.Conn, buffer []byte) {
+func (r *Replica) HandleSWIMPingMessage(conn net.Conn, buffer []byte, bufferLength int) {
 
 }
 
-func (r *Replica) HandlePiggyBackSWIMMessage(conn net.Conn, buffer []byte) {
+func (r *Replica) HandlePiggyBackSWIMMessage(conn net.Conn, buffer []byte, bufferLength int) {
+	var piggyBackRequest r.protocolMessages.PiggyBackMsg
+
+	if err := json.Unmarshal(buffer[:bufferLength], &piggyBackRequest); err != nil {
+		// TODO -> Write Error Message to WAL.
+	}
+
+	host, port, _ := net.SplitHostPort(piggyBackRequest.TargetNode)
+	ctx, cancel := context.WithTimeout(context.Background(), r.timeoutTime)
+	defer cancel() 
+
+	conn, err := net.Dial("tcp", piggyBackRequest.TargetNode)
+	defer conn.Close()
+
+	if err != nil {
+		// TODO -> Write to WAL
+	}
+
+	jsonEncodedPing, err := r.swimMarshaler.MarshalPing()
+	if err != nil {
+		// TODO -> Write to WAL
+	}
+
+	conn.Write(jsonEncodedPing)
+
+	select {
+	// f the piggyback transmission to the target node times out, 
+	// I must send a message to the parent node containing a negative acknowledgment (ACK) with a value of 0.
+	case <- ctx.Done():
+		r.writeBackToParentNode(0, piggyBackRequest.ParentNode)
+	default:
+		r.writeBackToParentNode(1, piggyBackRequest.ParentNode)
+	}
+}
+
+func (r *Replica) HandleSWIMFailureDetectionMessage(conn net.Conn, buffer []byte, bufferLength int) {
 
 }
 
-func (r *Replica) HandleSWIMFailureDetectionMessage(conn net.Conn, buffer []byte) {
+func (r *Replica) writeBackToParentNode(pingAckValue int, parentNodeInfos string) {
+	conn, err := net.Dial("tcp", parentNodeInfos)
+	defer conn.Close()
 
+	jsonValueToSend, _ := r.swimMarshaler.MarshalAckMessage(pingAckValue)
+	conn.Write(jsonValueToSend)
 }
