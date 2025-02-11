@@ -128,19 +128,20 @@ func (r *Replica) handleConnection(conn net.Conn, message *Message) {
 func (r *Replica) handleSWIMProtocolConnection(conn net.Conn, buffer []byte, methodType string, countBuffer int) {
 	switch methodType {
 	case "swim":
-		r.HandleSWIMFailureDetectionMessage(conn, buffer, countBuffer)
+		r.HandleSWIMFailureDetectionMessage(buffer, countBuffer)
 	case "ping":
-		r.HandleSWIMPingMessage(conn, buffer, countBuffer)
+		r.HandleSWIMPingMessage(buffer, countBuffer)
 	case "piggyback":
-		r.HandlePiggyBackSWIMMessage(conn, buffer, countBuffer)
+		r.HandlePiggyBackSWIMMessage(buffer, countBuffer)
 	}
+	conn.Close()
 }
 
-func (r *Replica) HandleSWIMPingMessage(conn net.Conn, buffer []byte, bufferLength int) {
+func (r *Replica) HandleSWIMPingMessage(buffer []byte, bufferLength int) {
 
 }
 
-func (r *Replica) HandlePiggyBackSWIMMessage(conn net.Conn, buffer []byte, bufferLength int) {
+func (r *Replica) HandlePiggyBackSWIMMessage(buffer []byte, bufferLength int) {
 	var piggyBackRequest r.protocolMessages.PiggyBackMsg
 
 	if err := json.Unmarshal(buffer[:bufferLength], &piggyBackRequest); err != nil {
@@ -175,7 +176,7 @@ func (r *Replica) HandlePiggyBackSWIMMessage(conn net.Conn, buffer []byte, buffe
 	}
 }
 
-func (r *Replica) HandleSWIMFailureDetectionMessage(conn net.Conn, buffer []byte, bufferLength int) {
+func (r *Replica) HandleSWIMFailureDetectionMessage(buffer []byte, bufferLength int) {
 
 }
 
