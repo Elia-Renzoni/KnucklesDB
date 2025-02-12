@@ -7,6 +7,7 @@ import (
 	"knucklesdb/store"
 	"knucklesdb/swim"
 	"net"
+	"strconv"
 	"time"
 
 	id "github.com/google/uuid"
@@ -20,11 +21,13 @@ type Replica struct {
 	protocolMessages SwimProtocolMessages
 	timeoutTime      time.Duration
 	swimMarshaler    *swim.ProtocolMarshaer
+	clusterJoiner    *swim.ClusterManager
 }
 
 type SwimProtocolMessages struct {
 	PiggyBackMsg        swim.PiggyBackMessage
 	FailureDetectionMsg swim.DetectionMessage
+	JoinRequest         swim.JoinMessage
 }
 
 type Message struct {
@@ -34,7 +37,7 @@ type Message struct {
 }
 
 func NewReplica(address string, port string, dbMap *store.KnucklesMap, timeout time.Duration,
-	marshaler *swim.ProtocolMarshaer) *Replica {
+	marshaler *swim.ProtocolMarshaer, clusterData *swim.ClusterManager) *Replica {
 	return &Replica{
 		replicaID:     id.New(),
 		address:       address,
@@ -42,6 +45,7 @@ func NewReplica(address string, port string, dbMap *store.KnucklesMap, timeout t
 		kMap:          dbMap,
 		timeoutTime:   timeout,
 		swimMarshaler: marshaler,
+		clusterJoiner: clusterData,
 	}
 }
 
@@ -92,6 +96,8 @@ func (r *Replica) serveRequest(conn net.Conn) {
 			r.handleSWIMProtocolConnection(conn, buffer, msg.MethodType, n)
 		case "set", "get":
 			go r.handleConnection(conn, msg)
+		case "join":
+			r.handleJoinMembershipMessage(conn, buffer, n)
 		default:
 			toSend, _ := json.Marshal(map[string]string{
 				"error": "Illegal Method Type",
@@ -190,4 +196,21 @@ func (r *Replica) HandlePiggyBackSWIMMessage(conn net.Conn, buffer []byte, buffe
 // TODO
 func (r *Replica) HandleSWIMFailureDetectionMessage(buffer []byte, bufferLength int) {
 
+}
+
+func (r *Replica) handleJoinMembershipMessage(conn net.Conn, buffer []byte, bufferLength int) {
+	json.Unmarshal(buffer[:bufferLength], &r.protocolMessages.JoinRequest)
+	converted, err := strconv.Atoi(r.protocolMessages.JoinRequest.ListenPort)
+	if err != nil {
+		bytes, _ := json.Marshal(map[string]any{
+			"error": "Malformed Listen Port",
+		})
+		conn.Write(bytes)
+	} else {
+		r.clusterJoiner.JoinCluster(net.IP(r.protocolMessages.JoinRequest.IPAddr), converted)
+		toSend, _ := r.swimMarshaler.MarshalAckMessage(1)
+		conn.Write(toSend)
+	}
+
+	conn.Close()
 }

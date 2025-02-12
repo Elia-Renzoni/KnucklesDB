@@ -73,3 +73,18 @@ func (p *ProtocolMarshaer) MarshalAckMessage(ackResultValue int) ([]byte, error)
 
 	return encodedAckMessage, err
 }
+
+func (p *ProtocolMarshaer) MarshalJoinMessage(host, port string) ([]byte, error) {
+	var (
+		encodedJoinMessage []byte
+		err                error
+	)
+
+	encodedJoinMessage, err = json.Marshal(map[string]any{
+		"type": "join",
+		"ip":   host,
+		"port": port,
+	})
+
+	return encodedJoinMessage, err
+}

@@ -26,3 +26,9 @@ type DetectionMessage struct {
 type AckMessage struct {
 	AckContent int `json:"ack,omitempty"`
 }
+
+type JoinMessage struct {
+	MethodType string `json:"type"`
+	IPAddr     string `json:"ip"`
+	ListenPort string `json:"port"`
+}
