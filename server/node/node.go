@@ -187,6 +187,7 @@ func (r *Replica) HandlePiggyBackSWIMMessage(conn net.Conn, buffer []byte, buffe
 	}
 }
 
+// TODO
 func (r *Replica) HandleSWIMFailureDetectionMessage(buffer []byte, bufferLength int) {
 
 }
