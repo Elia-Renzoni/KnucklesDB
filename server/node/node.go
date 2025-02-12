@@ -1,13 +1,14 @@
 package node
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"knucklesdb/store"
 	"knucklesdb/swim"
 	"net"
-	"context"
 	"time"
+
 	id "github.com/google/uuid"
 )
 
@@ -17,8 +18,8 @@ type Replica struct {
 	listenPort       string
 	kMap             *store.KnucklesMap
 	protocolMessages SwimProtocolMessages
-	timeoutTime time.Duration
-	swimMarshaler *swim.ProtocolMarshaer
+	timeoutTime      time.Duration
+	swimMarshaler    *swim.ProtocolMarshaer
 }
 
 type SwimProtocolMessages struct {
@@ -33,13 +34,13 @@ type Message struct {
 }
 
 func NewReplica(address string, port string, dbMap *store.KnucklesMap, timeout time.Duration,
-	           marshaler *swim.ProtocolMarshaer) *Replica {
+	marshaler *swim.ProtocolMarshaer) *Replica {
 	return &Replica{
-		replicaID:  id.New(),
-		address:    address,
-		listenPort: port,
-		kMap:       dbMap,
-		timeoutTime: timeout,
+		replicaID:     id.New(),
+		address:       address,
+		listenPort:    port,
+		kMap:          dbMap,
+		timeoutTime:   timeout,
 		swimMarshaler: marshaler,
 	}
 }
@@ -69,7 +70,11 @@ func (r *Replica) serveRequest(conn net.Conn) {
 	var (
 		buffer []byte
 		msg    = &Message{}
+		ctx    = context.Background()
 	)
+
+	_, cancel := context.WithDeadline(ctx, time.Time{}.Add(10*time.Second))
+	defer cancel()
 
 	buffer = make([]byte, 2040)
 	n, err := conn.Read(buffer)
@@ -85,8 +90,13 @@ func (r *Replica) serveRequest(conn net.Conn) {
 		switch msg.MethodType {
 		case "swim", "ping", "piggyback":
 			r.handleSWIMProtocolConnection(conn, buffer, msg.MethodType, n)
-		default:
+		case "set", "get":
 			go r.handleConnection(conn, msg)
+		default:
+			toSend, _ := json.Marshal(map[string]string{
+				"error": "Illegal Method Type",
+			})
+			conn.Write(toSend)
 		}
 	}
 }
@@ -116,43 +126,42 @@ func (r *Replica) handleConnection(conn net.Conn, message *Message) {
 				"ack": value,
 			})
 		}
-	default:
-		responsePayload, _ = json.Marshal(map[string]string{
-			"error": "Illegal Method Type",
-		})
 	}
 
 	conn.Write(responsePayload)
 }
 
 func (r *Replica) handleSWIMProtocolConnection(conn net.Conn, buffer []byte, methodType string, countBuffer int) {
+	defer conn.Close()
+
 	switch methodType {
 	case "swim":
 		r.HandleSWIMFailureDetectionMessage(buffer, countBuffer)
 	case "ping":
-		r.HandleSWIMPingMessage(buffer, countBuffer)
+		r.HandlePingSWIMMessage(conn)
 	case "piggyback":
-		r.HandlePiggyBackSWIMMessage(buffer, countBuffer)
+		r.HandlePiggyBackSWIMMessage(conn, buffer, countBuffer)
 	}
-	conn.Close()
 }
 
-func (r *Replica) HandleSWIMPingMessage(buffer []byte, bufferLength int) {
-
+func (r *Replica) HandlePingSWIMMessage(conn net.Conn) {
+	jsonAckValueToSend, err := r.swimMarshaler.MarshalAckMessage(1)
+	if err != nil {
+		// Write to WAL.
+	}
+	conn.Write(jsonAckValueToSend)
 }
 
-func (r *Replica) HandlePiggyBackSWIMMessage(buffer []byte, bufferLength int) {
-	var piggyBackRequest r.protocolMessages.PiggyBackMsg
+func (r *Replica) HandlePiggyBackSWIMMessage(conn net.Conn, buffer []byte, bufferLength int) {
 
-	if err := json.Unmarshal(buffer[:bufferLength], &piggyBackRequest); err != nil {
+	if err := json.Unmarshal(buffer[:bufferLength], &r.protocolMessages.PiggyBackMsg); err != nil {
 		// TODO -> Write Error Message to WAL.
 	}
 
-	host, port, _ := net.SplitHostPort(piggyBackRequest.TargetNode)
 	ctx, cancel := context.WithTimeout(context.Background(), r.timeoutTime)
-	defer cancel() 
+	defer cancel()
 
-	conn, err := net.Dial("tcp", piggyBackRequest.TargetNode)
+	connHelper, err := net.Dial("tcp", r.protocolMessages.PiggyBackMsg.TargetNode)
 	defer conn.Close()
 
 	if err != nil {
@@ -164,26 +173,20 @@ func (r *Replica) HandlePiggyBackSWIMMessage(buffer []byte, bufferLength int) {
 		// TODO -> Write to WAL
 	}
 
-	conn.Write(jsonEncodedPing)
+	connHelper.Write(jsonEncodedPing)
 
 	select {
-	// f the piggyback transmission to the target node times out, 
+	// f the piggyback transmission to the target node times out,
 	// I must send a message to the parent node containing a negative acknowledgment (ACK) with a value of 0.
-	case <- ctx.Done():
-		r.writeBackToParentNode(0, piggyBackRequest.ParentNode)
+	case <-ctx.Done():
+		jsonValueNeg, _ := r.swimMarshaler.MarshalAckMessage(0)
+		conn.Write(jsonValueNeg)
 	default:
-		r.writeBackToParentNode(1, piggyBackRequest.ParentNode)
+		jsonValuePos, _ := r.swimMarshaler.MarshalAckMessage(1)
+		conn.Write(jsonValuePos)
 	}
 }
 
 func (r *Replica) HandleSWIMFailureDetectionMessage(buffer []byte, bufferLength int) {
 
-}
-
-func (r *Replica) writeBackToParentNode(pingAckValue int, parentNodeInfos string) {
-	conn, err := net.Dial("tcp", parentNodeInfos)
-	defer conn.Close()
-
-	jsonValueToSend, _ := r.swimMarshaler.MarshalAckMessage(pingAckValue)
-	conn.Write(jsonValueToSend)
 }
