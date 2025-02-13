@@ -1,13 +1,13 @@
 package main
 
 import (
-	"knucklesdb/client/interface"
+	"knucklesdb/client"
 	"fmt"
 )
 
 func main() {
-	client := interface.NewClient("127.0.0.1", "6800", "127.0.0.1", "5050", 0)
-	result, err := client.Get([]byte("/foo"))
+	knucklesClient := client.NewClient("127.0.0.1", "6800", "127.0.0.1", "5050", 0)
+	result, err := knucklesClient.Get([]byte("/foo"))
 	if err != nil {
 		fmt.Printf("%v \n", err)
 	}
