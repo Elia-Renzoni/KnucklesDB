@@ -1,4 +1,4 @@
-package knucklesclient
+package client
 
 import (
 	"net"
