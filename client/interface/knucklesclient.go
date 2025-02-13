@@ -5,6 +5,7 @@ import (
 	"time"
 	"errors"
 	"encoding/json"
+	"log"
 )
 
 type KnucklesDBClient struct {
@@ -34,6 +35,8 @@ func NewClient(clientHost, clientListenPort string, targetNodeAddr, targetNodePo
 }
 
 func (k *KnucklesDBClient) Set(key, value []byte) error {
+	var response ServerMessages
+
 	if okKey := isEmpty(key); okKey {
 		return errors.New("The Key is Empty!")
 	}
@@ -63,6 +66,9 @@ func (k *KnucklesDBClient) Set(key, value []byte) error {
 
 		reply := make([]byte, 2024)
 		n, _ := k.conn.Read(reply)
+		json.Unmarshal(reply[:n], &response)
+
+		log.Println(response.Ack)
 		k.conn.Close()
 	}
 	return nil
