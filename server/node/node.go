@@ -125,7 +125,7 @@ func (r *Replica) handleConnection(conn net.Conn, message *Message) {
 	case "get":
 		if getErr, value = r.kMap.Get(message.Key); getErr != nil {
 			responsePayload, _ = json.Marshal(map[string]string{
-				"error": getErr.Error(),
+				"ack": getErr.Error(),
 			})
 		} else {
 			responsePayload, _ = json.Marshal(map[string][]byte{
