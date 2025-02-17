@@ -7,8 +7,8 @@ import (
 	"knucklesdb/swim"
 	"flag"
 	"time"
-	"os"
 	"strconv"
+	"fmt"
 )
 
 func main() {
@@ -30,10 +30,10 @@ func main() {
 	ok, err := joiner.IsSeed(*host, correctPort)
 	if err != nil {
 		// TODO -> Write to WAL.
-		os.Exit(1)
+		fmt.Printf("%v", err)
 	}
 
-	if !ok {
+	if ok {
 		joiner.JoinRequest(*host, *port)
 	}
 
