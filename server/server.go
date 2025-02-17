@@ -33,7 +33,7 @@ func main() {
 		fmt.Printf("%v", err)
 	}
 
-	if ok {
+	if !ok {
 		joiner.JoinRequest(*host, *port)
 	}
 
