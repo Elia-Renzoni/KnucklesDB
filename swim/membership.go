@@ -12,6 +12,7 @@ import (
 	"net"
 	"os"
 	"time"
+	"strconv"
 
 	"slices"
 	"gopkg.in/yaml.v3"
@@ -44,6 +45,7 @@ func NewClusterManager() *ClusterManager {
 func (c *ClusterManager) JoinRequest(host, port string) {
 	var ackResult AckMessage
 	seedInfo := c.getSeedNodeHostPort()
+	fmt.Println(seedInfo)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	// by using an infinite loop we create a stubbon link
@@ -85,7 +87,7 @@ func (c *ClusterManager) getSeedNodeHostPort() string {
 
 	yaml.Unmarshal(fileData[:count], &seedNodeInfo)
 
-	joined := net.JoinHostPort(seedNodeInfo.SeedNodeAddress, string(seedNodeInfo.SeedNodeListenPort))
+	joined := net.JoinHostPort(seedNodeInfo.SeedNodeAddress, strconv.Itoa(seedNodeInfo.SeedNodeListenPort))
 	return joined
 }
 
