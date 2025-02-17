@@ -36,6 +36,11 @@ func NewClusterManager() *ClusterManager {
 	}
 }
 
+/*
+*	@brief ...
+*	@param IP address.
+*	@param listen port.
+**/
 func (c *ClusterManager) JoinRequest(host, port string) {
 	var ackResult AckMessage
 	seedInfo := c.getSeedNodeHostPort()
@@ -85,7 +90,7 @@ func (c *ClusterManager) getSeedNodeHostPort() string {
 }
 
 /*
-*	@brief this method will be called by the new nodes to join the cluster.
+*	@brief this method will be called by the seed server to add new nodes to the cluster.
 **/
 func (c *ClusterManager) JoinCluster(address net.IP, port int) {
 	n := NewNode(address, port, STATUS_ALIVE)
