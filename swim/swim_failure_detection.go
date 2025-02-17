@@ -57,7 +57,6 @@ func NewSWIMFailureDetector(nodes *ClusterManager, marshaler *ProtocolMarshaer, 
 *	@param listen port of the target node
  */
 func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
-	
 	joined := net.JoinHostPort(nodeHost, strconv.Itoa(nodeListenPort))
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, s.timeoutTime)
