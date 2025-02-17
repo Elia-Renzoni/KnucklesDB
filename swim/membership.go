@@ -13,7 +13,7 @@ import (
 	"os"
 	"time"
 
-	"golang.org/x/exp/slices"
+	"slices"
 	"gopkg.in/yaml.v3"
 )
 

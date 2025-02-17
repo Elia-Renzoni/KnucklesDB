@@ -7,6 +7,8 @@ import (
 	"knucklesdb/swim"
 	"flag"
 	"time"
+	"os"
+	"strconv"
 )
 
 func main() {
@@ -21,10 +23,17 @@ func main() {
 
 	joiner := swim.NewClusterManager()
 	marshaler := swim.NewProtocolMarshaler()
-	failureDetector := swim.NewSWIMFailureDetector(joiner, marshaler, kHelperNodes, routineSchedulingTime, timeoutDuration)
+	swimFailureDetector := swim.NewSWIMFailureDetector(joiner, marshaler, kHelperNodes, routineSchedulingTime, timeoutDuration)
 	
 	// add the server to the cluster.
-	if ok := joiner.isSeed(); !ok {
+	correctPort, _ := strconv.Atoi(*port)
+	ok, err := joiner.IsSeed(*host, correctPort)
+	if err != nil {
+		// TODO -> Write to WAL.
+		os.Exit(1)
+	}
+
+	if !ok {
 		joiner.JoinRequest(*host, *port)
 	}
 
@@ -39,7 +48,7 @@ func main() {
 
 	go failureDetector.ClockPageEviction()
 	go updateQueue.UpdateQueueReader()
-	go failureDetector.ClusterFailureDetection()
+	go swimFailureDetector.ClusterFailureDetection()
 
 	replica.Start()
 }
