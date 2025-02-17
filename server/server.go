@@ -12,13 +12,16 @@ import (
 func main() {
 	host := flag.String("h", "localhost", "a string")
 	port := flag.String("p", "5050", "a string")
-	timeoutDuration := 10 * time.Second
+	timeoutDuration := 7 * time.Second
+	kHelperNodes := 2
+	routineSchedulingTime := 7 * time.Second
 	var wg sync.WaitGroup
 
 	flag.Parse()
 
 	joiner := swim.NewClusterManager()
 	marshaler := swim.NewProtocolMarshaler()
+	failureDetector := swim.NewSWIMFailureDetector(joiner, marshaler, kHelperNodes, routineSchedulingTime, timeoutDuration)
 	
 	// add the server to the cluster.
 	if ok := joiner.isSeed(); !ok {
@@ -36,6 +39,7 @@ func main() {
 
 	go failureDetector.ClockPageEviction()
 	go updateQueue.UpdateQueueReader()
+	go failureDetector.ClusterFailureDetection()
 
 	replica.Start()
 }
