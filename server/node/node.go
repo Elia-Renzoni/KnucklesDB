@@ -201,6 +201,7 @@ func (r *Replica) HandleSWIMFailureDetectionMessage(buffer []byte, bufferLength 
 func (r *Replica) handleJoinMembershipMessage(conn net.Conn, buffer []byte, bufferLength int) {
 	json.Unmarshal(buffer[:bufferLength], &r.protocolMessages.JoinRequest)
 	converted, err := strconv.Atoi(r.protocolMessages.JoinRequest.ListenPort)
+	fmt.Println(converted)
 	if err != nil {
 		bytes, _ := json.Marshal(map[string]any{
 			"error": "Malformed Listen Port",

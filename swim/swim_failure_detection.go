@@ -16,6 +16,8 @@ import (
 	"math/rand"
 	"net"
 	"time"
+	"fmt"
+	"strconv"
 )
 
 type SWIMFailureDetector struct {
@@ -55,17 +57,21 @@ func NewSWIMFailureDetector(nodes *ClusterManager, marshaler *ProtocolMarshaer, 
 *	@param listen port of the target node
  */
 func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
-	joined := net.JoinHostPort(nodeHost, string(nodeListenPort))
+	
+	joined := net.JoinHostPort(nodeHost, strconv.Itoa(nodeListenPort))
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, s.timeoutTime)
 	defer cancel()
 
 	conn, err := net.Dial("tcp", joined)
-	defer conn.Close()
+	//defer conn.Close()
 
 	if err != nil {
 		// do something... write in WAL
+		fmt.Println(err)
 	}
+
+	defer conn.Close()
 
 	jsonValue, _ := s.marshaler.MarshalPing()
 	conn.Write(jsonValue)

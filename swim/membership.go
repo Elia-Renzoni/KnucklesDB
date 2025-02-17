@@ -66,6 +66,7 @@ func (c *ClusterManager) JoinRequest(host, port string) {
 		default:
 			count, _ := conn.Read(reply)
 			json.Unmarshal(reply[:count], &ackResult)
+			fmt.Println(ackResult)
 		}
 		break
 	}
