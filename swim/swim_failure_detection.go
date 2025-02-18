@@ -164,9 +164,9 @@ func (s *SWIMFailureDetector) pingPiggyBack() func(string, int, string) int {
 			if opErr, ok := err.(*net.OpError); ok {
 				if sysErr, okErr := opErr.Err.(*os.SyscallError); okErr {
 					if sysErr.Err == syscall.ECONNREFUSED {
-						s.changeNodeState(targetNode, REMOVED)
+						s.changeNodeState(targetNode, STATUS_REMOVED)
 						// TODO: piggy back
-						return
+						return 0
 				}
 			}
 		}
