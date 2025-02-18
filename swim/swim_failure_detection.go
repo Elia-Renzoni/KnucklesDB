@@ -113,7 +113,7 @@ func (s *SWIMFailureDetector) piggyBack(targetInfo string) {
 
 			// send the piggyback message indicating the target node address and the
 			// parent address
-			result := piggy(helperNode.nodeAddress.String(), helperNode.nodeListenPort, targetInfo)
+			result := piggy(helperNode.nodeAddress, helperNode.nodeListenPort, targetInfo)
 
 			// store the result of the piggyback operation
 			helperResponses = append(helperResponses, result)
@@ -174,7 +174,7 @@ func (s *SWIMFailureDetector) pingPiggyBack() func(string, int, string) int {
 func (s *SWIMFailureDetector) changeNodeState(nodeHost string, nodeUpdatedStatus int) {
 	// search and get the node
 	for _, node := range s.nodesList.clusterMetadata {
-		if node.nodeAddress.String() == nodeHost {
+		if node.nodeAddress == nodeHost {
 			node.nodeStatus = nodeUpdatedStatus
 		}
 	}
@@ -187,7 +187,7 @@ func (s *SWIMFailureDetector) ClusterFailureDetection() {
 		time.Sleep(s.swimSchedule)
 
 		for _, node := range s.nodesList.clusterMetadata {
-			s.sendPing(node.nodeAddress.String(), node.nodeListenPort)
+			s.sendPing(node.nodeAddress, node.nodeListenPort)
 		}
 	}
 }

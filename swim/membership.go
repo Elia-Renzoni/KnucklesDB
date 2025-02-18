@@ -95,11 +95,11 @@ func (c *ClusterManager) getSeedNodeHostPort() string {
 /*
 *	@brief this method will be called by the seed server to add new nodes to the cluster.
 **/
-func (c *ClusterManager) JoinCluster(address net.IP, port int) {
+func (c *ClusterManager) JoinCluster(address string, port int) {
 	n := NewNode(address, port, STATUS_ALIVE)
 	// Idempotency is achieved through the loop above
 	for index, value := range c.clusterMetadata {
-		if value.nodeAddress.String() == address.String() && value.nodeListenPort == port {
+		if value.nodeAddress == address && value.nodeListenPort == port {
 			c.clusterMetadata = slices.Delete(c.clusterMetadata, index, index)
 			break
 		}

@@ -6,9 +6,6 @@
 
 package swim
 
-import (
-	"net"
-)
 
 const (
 	STATUS_ALIVE int = iota * 1
@@ -17,14 +14,14 @@ const (
 )
 
 type Node struct {
-	nodeAddress net.IP
+	nodeAddress string
 	nodeListenPort int
 
 	// this field will containt the status
 	nodeStatus int
 }
 
-func NewNode(nodeAddress net.IP, listenPort, nodeStatus int) *Node {
+func NewNode(nodeAddress string, listenPort, nodeStatus int) *Node {
 	return &Node{
 		nodeAddress: nodeAddress,
 		nodeListenPort: listenPort,

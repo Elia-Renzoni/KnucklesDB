@@ -208,7 +208,7 @@ func (r *Replica) handleJoinMembershipMessage(conn net.Conn, buffer []byte, buff
 		})
 		conn.Write(bytes)
 	} else {
-		r.clusterJoiner.JoinCluster(net.IP(r.protocolMessages.JoinRequest.IPAddr), converted)
+		r.clusterJoiner.JoinCluster(r.protocolMessages.JoinRequest.IPAddr, converted)
 		toSend, _ := r.swimMarshaler.MarshalAckMessage(1)
 		conn.Write(toSend)
 	}
