@@ -35,6 +35,8 @@ func main() {
 
 	if !ok {
 		joiner.JoinRequest(*host, *port)
+	} else {
+		go swimFailureDetector.ClusterFailureDetection()
 	}
 
 	bufferPool := store.NewBufferPool()
@@ -48,7 +50,6 @@ func main() {
 
 	go failureDetector.ClockPageEviction()
 	go updateQueue.UpdateQueueReader()
-	go swimFailureDetector.ClusterFailureDetection()
 
 	replica.Start()
 }

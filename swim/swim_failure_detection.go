@@ -167,9 +167,9 @@ func (s *SWIMFailureDetector) pingPiggyBack() func(string, int, string) int {
 						s.changeNodeState(targetNode, STATUS_REMOVED)
 						// TODO: piggy back
 						return 0
+					}
 				}
 			}
-		}
 		}
 		defer conn.Close()
 
