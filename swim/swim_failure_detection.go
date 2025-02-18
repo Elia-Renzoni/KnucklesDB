@@ -86,6 +86,7 @@ func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
 	default:
 		count, _ := conn.Read(replyData)
 		json.Unmarshal(replyData[:count], &s.swimMessageAck)
+		fmt.Println(s.swimMessageAck)
 	}
 }
 

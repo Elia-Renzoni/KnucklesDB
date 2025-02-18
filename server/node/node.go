@@ -151,6 +151,7 @@ func (r *Replica) handleSWIMProtocolConnection(conn net.Conn, buffer []byte, met
 }
 
 func (r *Replica) HandlePingSWIMMessage(conn net.Conn) {
+	fmt.Printf("%s \n", "ping message arrived")
 	jsonAckValueToSend, err := r.swimMarshaler.MarshalAckMessage(1)
 	if err != nil {
 		// Write to WAL.
