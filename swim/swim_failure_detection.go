@@ -18,6 +18,8 @@ import (
 	"time"
 	"fmt"
 	"strconv"
+	"syscall"
+	"os"
 )
 
 type SWIMFailureDetector struct {
@@ -63,10 +65,18 @@ func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
 	defer cancel()
 
 	conn, err := net.Dial("tcp", joined)
-	//defer conn.Close()
 
 	if err != nil {
 		// do something... write in WAL
+		if opErr, ok := err.(*net.OpError); ok {
+			if sysErr, okErr := opErr.Err.(*os.SyscallError); okErr {
+				if sysErr.Err == syscall.ECONNREFUSED {
+					s.changeNodeState(nodeHost, STATUS_SUSPICIOUS)
+					go s.piggyBack(joined)
+					return
+				}
+			}
+		}
 		fmt.Println(err)
 	}
 
@@ -148,11 +158,20 @@ func (s *SWIMFailureDetector) pingPiggyBack() func(string, int, string) int {
 		defer cancel()
 
 		conn, err := net.Dial("tcp", net.JoinHostPort(parentIP, string(parentPort)))
-		defer conn.Close()
 
 		if err != nil {
-			// TODO -> write error in the WAL
+			// TODO -> write error in the WAL.
+			if opErr, ok := err.(*net.OpError); ok {
+				if sysErr, okErr := opErr.Err.(*os.SyscallError); okErr {
+					if sysErr.Err == syscall.ECONNREFUSED {
+						s.changeNodeState(targetNode, REMOVED)
+						// TODO: piggy back
+						return
+				}
+			}
 		}
+		}
+		defer conn.Close()
 
 		jsonValue, _ := s.marshaler.MarshalPiggyBack(net.JoinHostPort(parentIP, string(parentPort)), targetNode)
 		conn.Write(jsonValue)
