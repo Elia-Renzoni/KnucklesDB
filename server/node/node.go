@@ -172,6 +172,9 @@ func (r *Replica) HandlePiggyBackSWIMMessage(conn net.Conn, buffer []byte, buffe
 
 	if err != nil {
 		// TODO -> Write to WAL
+		jsonValueNeg, _ := r.swimMarshaler.MarshalAckMessage(0)
+		conn.Write(jsonValueNeg)
+		return 
 	}
 	defer connHelper.Close()
 
