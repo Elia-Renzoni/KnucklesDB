@@ -169,11 +169,11 @@ func (r *Replica) HandlePiggyBackSWIMMessage(conn net.Conn, buffer []byte, buffe
 	defer cancel()
 
 	connHelper, err := net.Dial("tcp", r.protocolMessages.PiggyBackMsg.TargetNode)
-	defer conn.Close()
 
 	if err != nil {
 		// TODO -> Write to WAL
 	}
+	defer connHelper.Close()
 
 	jsonEncodedPing, err := r.swimMarshaler.MarshalPing()
 	if err != nil {
