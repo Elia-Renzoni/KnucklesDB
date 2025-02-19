@@ -109,6 +109,16 @@ func (c *ClusterManager) JoinCluster(address string, port int) {
 	// TODO -> start gossip cycle
 }
 
+func (c *ClusterManager) DeleteNodeFromCluster(address, port string) {
+	castedPort, _ := strconv.Atoi(port)
+	for index := range c.clusterMetadata {
+		if c.clusterMetadata[index].nodeAddress == address && c.clusterMetadata[index].nodeListenPort == castedPort {
+			c.clusterMetadata = slices.Delete(c.clusterMetadata, index, index)
+			break
+		}
+	}
+}
+
 /*
 *	@brief this method check if the caller is the seed node
 *	@param IP address of the caller

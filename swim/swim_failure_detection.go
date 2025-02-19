@@ -145,6 +145,7 @@ func (s *SWIMFailureDetector) piggyBack(targetInfo string) {
 		// the target node must be considered removed
 		if eliminationCondition {
 			s.changeNodeState(host, port, STATUS_REMOVED)
+			s.nodesList.DeleteNodeFromCluster(host, port)
 		}
 
 		// only for testing
@@ -197,10 +198,6 @@ func (s *SWIMFailureDetector) changeNodeState(nodeHost, nodePort string, nodeUpd
 			node.nodeStatus = nodeUpdatedStatus
 		}
 	}
-}
-
-func (s *SWIMFailureDetector) deleteNode(nodeHost string) {
-
 }
 
 // this method represent the goroutine that has to be called
