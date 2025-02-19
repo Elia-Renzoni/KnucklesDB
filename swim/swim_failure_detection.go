@@ -71,7 +71,7 @@ func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
 		if opErr, ok := err.(*net.OpError); ok {
 			if sysErr, okErr := opErr.Err.(*os.SyscallError); okErr {
 				if sysErr.Err == syscall.ECONNREFUSED {
-					s.changeNodeState(nodeHost, STATUS_SUSPICIOUS)
+					s.changeNodeState(nodeHost, strconv.Itoa(nodeListenPort), STATUS_SUSPICIOUS)
 					go s.piggyBack(joined)
 					return
 				}
@@ -89,7 +89,7 @@ func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
 	select {
 	// timeout occured
 	case <-ctx.Done():
-		s.changeNodeState(nodeHost, STATUS_SUSPICIOUS)
+		s.changeNodeState(nodeHost, strconv.Itoa(nodeListenPort), STATUS_SUSPICIOUS)
 		// TODO -> start a gossip cycle
 		go s.piggyBack(joined)
 	default:
@@ -129,13 +129,13 @@ func (s *SWIMFailureDetector) piggyBack(targetInfo string) {
 			helperResponses = append(helperResponses, result)
 		}
 
-		host, _, _ := net.SplitHostPort(targetInfo)
+		host, port, _ := net.SplitHostPort(targetInfo)
 
 		for _, result := range helperResponses {
 			// if there is just only a 1 in the results
 			// the target node is considered alive
 			if result == 1 {
-				s.changeNodeState(host, STATUS_ALIVE)
+				s.changeNodeState(host, port, STATUS_ALIVE)
 				eliminationCondition = false
 				break
 			}
@@ -144,7 +144,12 @@ func (s *SWIMFailureDetector) piggyBack(targetInfo string) {
 		// if every result are made of 0 then
 		// the target node must be considered removed
 		if eliminationCondition {
-			s.changeNodeState(host, STATUS_REMOVED)
+			s.changeNodeState(host, port, STATUS_REMOVED)
+		}
+
+		// only for testing
+		for _, v := range s.nodesList.clusterMetadata {
+			fmt.Printf("Node ID = %s %d Node Status: %d \n", v.nodeAddress, v.nodeListenPort, v.nodeStatus)
 		}
 	}
 }
@@ -161,15 +166,7 @@ func (s *SWIMFailureDetector) pingPiggyBack() func(string, int, string) int {
 
 		if err != nil {
 			// TODO -> write error in the WAL.
-			if opErr, ok := err.(*net.OpError); ok {
-				if sysErr, okErr := opErr.Err.(*os.SyscallError); okErr {
-					if sysErr.Err == syscall.ECONNREFUSED {
-						s.changeNodeState(targetNode, STATUS_REMOVED)
-						// TODO: piggy back
-						return 0
-					}
-				}
-			}
+			return 0
 		}
 		defer conn.Close()
 
@@ -191,13 +188,19 @@ func (s *SWIMFailureDetector) pingPiggyBack() func(string, int, string) int {
 	}
 }
 
-func (s *SWIMFailureDetector) changeNodeState(nodeHost string, nodeUpdatedStatus int) {
+func (s *SWIMFailureDetector) changeNodeState(nodeHost, nodePort string, nodeUpdatedStatus int) {
+	castedPort, _ := strconv.Atoi(nodePort)
+
 	// search and get the node
 	for _, node := range s.nodesList.clusterMetadata {
-		if node.nodeAddress == nodeHost {
+		if node.nodeAddress == nodeHost && node.nodeListenPort == castedPort {
 			node.nodeStatus = nodeUpdatedStatus
 		}
 	}
+}
+
+func (s *SWIMFailureDetector) deleteNode(nodeHost string) {
+
 }
 
 // this method represent the goroutine that has to be called
