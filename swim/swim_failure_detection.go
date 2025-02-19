@@ -77,7 +77,6 @@ func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
 				}
 			}
 		}
-		fmt.Println(err)
 	}
 
 	defer conn.Close()
@@ -115,7 +114,7 @@ func (s *SWIMFailureDetector) piggyBack(targetInfo string) {
 		var eliminationCondition bool = true
 
 		for i := 0; i < s.kHelperNodes; i++ {
-			randomKHelperNode := rand.Intn(s.kHelperNodes + 1)
+			randomKHelperNode := rand.Intn(s.kHelperNodes)
 
 			// select the K node
 			helperNode := s.nodesList.clusterMetadata[randomKHelperNode]
@@ -157,7 +156,8 @@ func (s *SWIMFailureDetector) pingPiggyBack() func(string, int, string) int {
 		ctx, cancel := context.WithTimeout(context.Background(), s.timeoutTime)
 		defer cancel()
 
-		conn, err := net.Dial("tcp", net.JoinHostPort(parentIP, string(parentPort)))
+		castedPort := strconv.Itoa(parentPort)
+		conn, err := net.Dial("tcp", net.JoinHostPort(parentIP, castedPort))
 
 		if err != nil {
 			// TODO -> write error in the WAL.
