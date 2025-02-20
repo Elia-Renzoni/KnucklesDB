@@ -5,9 +5,7 @@ type WAL struct {
 }
 
 func NewWAL() *WAL {
-	return &WAL{
-
-	}
+	return &WAL{}
 }
 
 func (w *WAL) appendBytes() {

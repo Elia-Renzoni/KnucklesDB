@@ -5,13 +5,13 @@ import (
 	"time"
 	"errors"
 	"encoding/json"
-	"log"
+	"fmt"
 )
 
 type KnucklesDBClient struct {
-	clientAddr net.IP
+	clientAddr string
 	clientListenPort string
-	targetNodeAddr net.IP
+	targetNodeAddr string
 	targetNodeListenPort string
 	replacers []string
 	heartbeatingTime time.Duration
@@ -19,15 +19,15 @@ type KnucklesDBClient struct {
 }
 
 type ServerMessages struct {
-	Ack `json:"ack"`
+	Ack string `json:"ack"`
 }
 
 
 func NewClient(clientHost, clientListenPort string, targetNodeAddr, targetNodePort string, frequencyTime time.Duration) *KnucklesDBClient {
 	return &KnucklesDBClient{
-		clientAddr: net.IP(clientHost),
-		clientListenPort, clientListenPort,
-		targetNodeAddr: net.IP(targetNodeAddr),
+		clientAddr: clientHost,
+		clientListenPort: clientListenPort,
+		targetNodeAddr: targetNodeAddr,
 		targetNodeListenPort: targetNodePort,
 		replacers: make([]string, 0),
 		heartbeatingTime: frequencyTime,
@@ -37,16 +37,20 @@ func NewClient(clientHost, clientListenPort string, targetNodeAddr, targetNodePo
 func (k *KnucklesDBClient) Set(key, value []byte) error {
 	var response ServerMessages
 
-	if okKey := isEmpty(key); okKey {
+	fmt.Printf("yooo")
+
+	/*if okKey := isEmpty(key); okKey {
 		return errors.New("The Key is Empty!")
 	}
 
 	if okValue := isEmpty(value); okValue {
 		return errors.New("The Value is Empty!")
-	}
+	}*/
 
-	joined := net.JoinHostPort(k.targetNodeAddr.String(), k.targetNodeListenPort)
-	jsonValue, marshalError := json.Marshal(map[string]string{
+	fmt.Printf("yuuuuu")
+
+	joined := net.JoinHostPort(k.targetNodeAddr, k.targetNodeListenPort)
+	jsonValue, marshalError := json.Marshal(map[string]any{
 		"type": "set",
 		"key": key,
 		"value": value,
@@ -56,10 +60,15 @@ func (k *KnucklesDBClient) Set(key, value []byte) error {
 		return marshalError
 	}
 
+	var err error
 	for {
 		time.Sleep(k.heartbeatingTime)
-		k.conn, err := net.Dial("tcp", joined)
+
+		fmt.Printf("foo")
+
+		k.conn, err = net.Dial("tcp", joined)
 		if err != nil {
+			fmt.Println(err)
 			return err
 		}
 		k.conn.Write(jsonValue)
@@ -68,20 +77,23 @@ func (k *KnucklesDBClient) Set(key, value []byte) error {
 		n, _ := k.conn.Read(reply)
 		json.Unmarshal(reply[:n], &response)
 
-		log.Println(response.Ack)
+		fmt.Println(response.Ack)
 		k.conn.Close()
 	}
 	return nil
 }
 
 func (k *KnucklesDBClient) Get(key []byte) (string, error) {
-	var serverResponse ServerMessages 
+	var (
+		err error
+		serverResponse ServerMessages 
+	)
 
 	if okKey := isEmpty(key); okKey {
 		return "", errors.New("The Key is Empty!")
 	}
 
-	jsonGetValue, marshalError := json.Marshal(map[string]string{
+	jsonGetValue, marshalError := json.Marshal(map[string]any{
 		"type": "get",
 		"key": key,
 	})
@@ -90,10 +102,10 @@ func (k *KnucklesDBClient) Get(key []byte) (string, error) {
 		return "", marshalError
 	}
 
-	joined := net.JoinHostPort(k.targetNodeAddr.String(), k.targetNodeListenPort)
+	joined := net.JoinHostPort(k.targetNodeAddr, k.targetNodeListenPort)
 
-	k.conn, err := net.Dial("tcp", joined)
-	if err ! nil {
+	k.conn, err = net.Dial("tcp", joined)
+	if err != nil {
 		return "", err
 	}
 
