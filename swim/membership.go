@@ -100,7 +100,7 @@ func (c *ClusterManager) JoinCluster(address string, port int) {
 	// Idempotency is achieved through the loop above
 	for index, value := range c.clusterMetadata {
 		if value.nodeAddress == address && value.nodeListenPort == port {
-			c.clusterMetadata = slices.Delete(c.clusterMetadata, index, index)
+			c.clusterMetadata = slices.Delete(c.clusterMetadata, index, index + 1)
 			break
 		}
 	}
@@ -113,7 +113,7 @@ func (c *ClusterManager) DeleteNodeFromCluster(address, port string) {
 	castedPort, _ := strconv.Atoi(port)
 	for index := range c.clusterMetadata {
 		if c.clusterMetadata[index].nodeAddress == address && c.clusterMetadata[index].nodeListenPort == castedPort {
-			c.clusterMetadata = slices.Delete(c.clusterMetadata, index, index)
+			c.clusterMetadata = slices.Delete(c.clusterMetadata, index, index + 1)
 			break
 		}
 	}

@@ -207,7 +207,12 @@ func (s *SWIMFailureDetector) ClusterFailureDetection() {
 		time.Sleep(s.swimSchedule)
 
 		for _, node := range s.nodesList.clusterMetadata {
-			s.sendPing(node.nodeAddress, node.nodeListenPort)
+			if node != nil {
+				if node.nodeStatus != STATUS_REMOVED {
+					s.sendPing(node.nodeAddress, node.nodeListenPort)
+				}
+			}
+			
 		}
 	}
 }
