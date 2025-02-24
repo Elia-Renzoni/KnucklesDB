@@ -68,7 +68,6 @@ func (k *KnucklesDBClient) Set(key, value []byte) error {
 
 		k.conn, err = net.Dial("tcp", joined)
 		if err != nil {
-			fmt.Println(err)
 			return err
 		}
 		k.conn.Write(jsonValue)

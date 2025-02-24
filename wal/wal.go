@@ -18,7 +18,7 @@ func NewWAL(filePath string) *WAL {
 	}
 }
 
-func (w *WAL) WriteWAL(keyHash int32, key, value, op []byte) {
+func (w *WAL) WriteWAL(toAppend WALEntry) {
 }
 
 func (w *WAL) IsWALFull() bool {
