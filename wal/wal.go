@@ -2,6 +2,7 @@ package wal
 
 import (
 	"os"
+	"bufio"
 )
 
 type WAL struct {
@@ -12,6 +13,7 @@ type WAL struct {
 	// hash + offset
 	walHash map[int32]int64
 	walFile *os.File
+	scanner *bufio.Scanner
 }
 
 const (
@@ -31,7 +33,11 @@ func NewWAL(filePath string) *WAL {
 func (w *WAL) WriteWAL(toAppend WALEntry) {
 	var err error 
 
-	w.walFile = os.Open(w.path)
+	w.walFile, err = os.Open(w.path)
+	if err != nil {
+		return 
+	}
+	defer w.walFile.Close()
 	w.writeOffset = w.getLatestOffset()
 }
 
@@ -44,7 +50,14 @@ func (w *WAL) ScanLines() (key []byte, value []byte) {
 }
 
 func (w *WAL) getLatestOffset() int64 {
-	
+	w.scanner = bufio.NewScanner(w.walFile)
+	offset := int64(0)
+
+	for w.scanner.Scan() {
+		offset += len(w.scanner.Bytes()) + 1
+	}
+
+	return offset
 }
 
 func (w *WAL) addOffsetEntry() {
