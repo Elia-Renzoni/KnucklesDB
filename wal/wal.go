@@ -29,6 +29,8 @@ func NewWAL(filePath string) *WAL {
 }
 
 func (w *WAL) WriteWAL(toAppend WALEntry) {
+	var err error 
+
 	w.walFile = os.Open(w.path)
 	w.writeOffset = w.getLatestOffset()
 }
@@ -42,6 +44,7 @@ func (w *WAL) ScanLines() (key []byte, value []byte) {
 }
 
 func (w *WAL) getLatestOffset() int64 {
+	
 }
 
 func (w *WAL) addOffsetEntry() {
