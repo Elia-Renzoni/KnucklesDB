@@ -1,5 +1,9 @@
 package wal
 
+import (
+	"bytes"
+)
+
 type WALEntry struct {
 	method []byte
 	key    []byte
@@ -14,4 +18,11 @@ func NewWALEntry(hash int32, parameters ...[]byte) WALEntry {
 		value:  parameters[2],
 		hash:   hash,
 	}
+}
+
+func (w WALEntry) IsSet() bool {
+	if bytes.ContainsAny(w.method, "Set") {
+		return true
+	}
+	return false
 }

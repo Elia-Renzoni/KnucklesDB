@@ -4,6 +4,8 @@ import (
 	"os"
 	"bufio"
 	"bytes"
+	"strings"
+	"strconv"
 )
 
 type WAL struct {
@@ -15,6 +17,8 @@ type WAL struct {
 	walHash map[int32]int64
 	walFile *os.File
 	helperBuffer bytes.Buffer
+
+	recoveryChannel chan WALEntry
 }
 
 const (
@@ -28,6 +32,7 @@ func NewWAL(filePath string) *WAL {
 		writeOffset: int64(0),
 		readOffset:  int64(0),
 		walHash:     make(map[int32]int64),
+		recoveryChannel: make(chan WALEntry),
 	}
 }
 
@@ -61,8 +66,30 @@ func (w *WAL) IsWALFull() bool {
 	return false
 }
 
-func (w *WAL) ScanLines() (key []byte, value []byte) {
-	return
+func (w *WAL) ScanLines() {
+	var err error 
+
+	w.walFile, err = os.Open(w.path)
+	if err != nil {
+		return
+	}
+	defer w.walFile.Close()
+
+	scanner := bufio.NewScanner(w.walFile)
+	for scanner.Scan() {
+		scannedText := scanner.Text()
+		splittedText := strings.Split(scannedText, ", ")
+
+		method := []byte(splittedText[0])
+		hash, _ = strconv.Atoi(splittedText[1])
+		key := []byte(splittedText[2])
+		value := []byte(splittedText[3])
+
+		entry := NewWALEntry(int32(hash), method, key, value)
+		w.recoveryChannel <- entry
+	}
+
+	close(w.recoveryChannel)
 }
 
 func (w *WAL) setWriteOffset(bytesToWrite []byte) {

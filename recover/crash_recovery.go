@@ -8,12 +8,14 @@ import (
 type Recover struct {
 	dbState *store.KnucklesMap
 	walAPI *wal.WALLockFreeQueue
+	walRecoveryChannel *wal.WAL
 }
 
-func NewRecover(db *store.KnucklesMap, wal *wal.WALLockFreeQueue) *Recover {
+func NewRecover(db *store.KnucklesMap, wal *wal.WALLockFreeQueue, walChannel *WAL) *Recover {
 	return &Recover{
 		db: db,
 		wal: wal,
+		walRecoveryChannel: walChannel,
 	}
 }
 
@@ -30,5 +32,17 @@ func (r *Recover) DeleteOperationWAL(hash int32, key, value []byte) {
 }
 
 func (r *Recover) StartRecovery() {
-	// TODO
+	go r.walRecoveryChannel.ScanLines()
+
+	for {
+		select {
+		case entryToRestore := <- r.walRecoveryChannel:
+			if entryToRestore.IsSet() {
+				r.dbState.Set(entryToRestore.key, entryToRestore.value)
+			}
+		// the channel is closed.
+		default:
+			break
+		}
+	}
 }
