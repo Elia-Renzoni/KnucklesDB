@@ -1,17 +1,16 @@
 package recover
 
 import (
-	"knucklesdb/store"
-	"kcnuklesdb/wal"
+	"knucklesdb/wal"
 )
 
 type Recover struct {
-	dbState *store.KnucklesMap
+	dbState *KnucklesMap
 	walAPI *wal.WALLockFreeQueue
 	walRecoveryChannel *wal.WAL
 }
 
-func NewRecover(db *store.KnucklesMap, wal *wal.WALLockFreeQueue, walChannel *WAL) *Recover {
+func NewRecover(db *KnucklesMap, wal *wal.WALLockFreeQueue, walChannel *WAL) *Recover {
 	return &Recover{
 		db: db,
 		wal: wal,

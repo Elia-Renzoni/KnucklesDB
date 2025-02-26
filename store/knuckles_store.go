@@ -21,15 +21,18 @@ type KnucklesMap struct {
 	hasher *SpookyHash
 
 	updateQueue *SingularUpdateQueue
+
+	walAPI *Recover
 }
 
-func NewKnucklesMap(bPool *BufferPool, t *AddressBinder, h *SpookyHash, queue *SingularUpdateQueue) *KnucklesMap {
+func NewKnucklesMap(bPool *BufferPool, t *AddressBinder, h *SpookyHash, queue *SingularUpdateQueue, walAPI *Recover) *KnucklesMap {
 	return &KnucklesMap{
 		size:              0,
 		bufferPool:        bPool,
 		addressTranslator: t,
 		hasher:            h,
 		updateQueue: queue,
+		walAPI: walAPI,
 	}
 }
 
@@ -48,6 +51,9 @@ func (k *KnucklesMap) Set(key []byte, value []byte) {
 	pageID = k.addressTranslator.TranslateHash(hash)
 	k.bufferPool.WritePage(int(pageID), key, value, 0)
 	k.updateQueue.AddVictimPage(NewVictim(key, int(pageID)))
+
+	// write the operation to the WAL to reach strong durability.
+	k.walAPI.SetOperationWAL(hash, key, value)
 }
 
 /**
