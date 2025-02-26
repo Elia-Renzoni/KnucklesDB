@@ -75,7 +75,3 @@ func (w *WAL) setWriteOffset() {
 
 	return offset
 }
-
-func (w *WAL) addOffsetEntry() {
-
-}
