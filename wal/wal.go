@@ -53,7 +53,7 @@ func (w *WAL) WriteWAL(toAppend WALEntry) {
 		w.setWriteOffset(entryToWrite)
 		w.walHash[toAppend.hash] = w.writeOffset
 
-		w.walFile.WriteAt(entryToWrite, entryOffset)
+		w.walFile.WriteAt(entryToWrite, w.writeOffset)
 	}
 }
 
