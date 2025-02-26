@@ -48,12 +48,12 @@ func (w *WAL) WriteWAL(toAppend WALEntry) {
 	buffer = [][]byte(toAppend.method, toAppend.hash, toAppend.key, toAppend.value, []byte("\n"))
 	entryToWrite = bytes.Join(buffer, []byte(", "))
 	if ok {
-		os.WriteAt(entryToWrite, entryOffset)
+		w.walFile.WriteAt(entryToWrite, entryOffset)
 	} else {
 		w.setWriteOffset()
 		w.walHash[toAppend.hash] = w.writeOffset
 
-		os.WriteAt(entryToWrite, entryOffset)
+		w.walFile.WriteAt(entryToWrite, entryOffset)
 	}
 }
 
