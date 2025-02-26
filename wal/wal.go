@@ -14,7 +14,7 @@ type WAL struct {
 	// hash + offset
 	walHash map[int32]int64
 	walFile *os.File
-	scanner *bufio.Scanner
+	helperBuffer bytes.Buffer
 }
 
 const (
@@ -50,7 +50,7 @@ func (w *WAL) WriteWAL(toAppend WALEntry) {
 	if ok {
 		w.walFile.WriteAt(entryToWrite, entryOffset)
 	} else {
-		w.setWriteOffset()
+		w.setWriteOffset(entryToWrite)
 		w.walHash[toAppend.hash] = w.writeOffset
 
 		w.walFile.WriteAt(entryToWrite, entryOffset)
@@ -65,13 +65,12 @@ func (w *WAL) ScanLines() (key []byte, value []byte) {
 	return
 }
 
-func (w *WAL) setWriteOffset() {
-	w.scanner = bufio.NewScanner(w.walFile)
-	offset := int64(0)
+func (w *WAL) setWriteOffset(bytesToWrite []byte) {
+	w.helperBuffer.Write(bytesToWrite)
 
-	for w.scanner.Scan() {
-		offset += len(w.scanner.Bytes()) + 1
-	}
+	offset := w.writeOffset
+	offset += w.helperBuffer.Len()
+	w.writeOffset = offset
 
-	return offset
+	w.helperBuffer.Reset()
 }
