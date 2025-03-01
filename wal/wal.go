@@ -1,11 +1,11 @@
 package wal
 
 import (
-	"os"
 	"bufio"
 	"bytes"
-	"strings"
+	"os"
 	"strconv"
+	"strings"
 )
 
 type WAL struct {
@@ -14,11 +14,11 @@ type WAL struct {
 	readOffset  int64
 
 	// hash + offset
-	walHash map[int32]int64
-	walFile *os.File
+	walHash      map[uint32]int64
+	walFile      *os.File
 	helperBuffer bytes.Buffer
 
-	recoveryChannel chan WALEntry
+	RecoveryChannel chan WALEntry
 }
 
 const (
@@ -28,46 +28,50 @@ const (
 
 func NewWAL(filePath string) *WAL {
 	return &WAL{
-		path:        filePath,
-		writeOffset: int64(0),
-		readOffset:  int64(0),
-		walHash:     make(map[int32]int64),
-		recoveryChannel: make(chan WALEntry),
+		path:            filePath,
+		writeOffset:     int64(0),
+		readOffset:      int64(0),
+		walHash:         make(map[uint32]int64),
+		RecoveryChannel: make(chan WALEntry),
 	}
 }
 
 func (w *WAL) WriteWAL(toAppend WALEntry) {
 	var (
-		err error
-		buffer [][]byte
+		err          error
+		buffer       [][]byte
 		entryToWrite []byte
-	) 
+	)
 
 	w.walFile, err = os.Open(w.path)
 	if err != nil {
-		return 
+		return
 	}
 	defer w.walFile.Close()
 
-	ok, entryOffset := w.walHash(toAppend.hash)
-	buffer = [][]byte(toAppend.method, toAppend.hash, toAppend.key, toAppend.value, []byte("\n"))
+	entryOffset, ok := w.walHash[toAppend.Hash]
+	var newLine = bytes.NewBufferString("\n")
+	buffer = [][]byte{toAppend.Method, toAppend.Hash, toAppend.Key, toAppend.Value, newLine.Bytes()}
 	entryToWrite = bytes.Join(buffer, []byte(", "))
 	if ok {
 		w.walFile.WriteAt(entryToWrite, entryOffset)
 	} else {
 		w.setWriteOffset(entryToWrite)
-		w.walHash[toAppend.hash] = w.writeOffset
+		w.walHash[toAppend.Hash] = w.writeOffset
 
 		w.walFile.WriteAt(entryToWrite, w.writeOffset)
 	}
 }
 
 func (w *WAL) IsWALFull() bool {
+	if len(w.walHash) > 0 {
+		return true
+	}
 	return false
 }
 
 func (w *WAL) ScanLines() {
-	var err error 
+	var err error
 
 	w.walFile, err = os.Open(w.path)
 	if err != nil {
@@ -81,22 +85,22 @@ func (w *WAL) ScanLines() {
 		splittedText := strings.Split(scannedText, ", ")
 
 		method := []byte(splittedText[0])
-		hash, _ = strconv.Atoi(splittedText[1])
+		hash, _ := strconv.Atoi(splittedText[1])
 		key := []byte(splittedText[2])
 		value := []byte(splittedText[3])
 
-		entry := NewWALEntry(int32(hash), method, key, value)
-		w.recoveryChannel <- entry
+		entry := NewWALEntry(uint32(hash), method, key, value)
+		w.RecoveryChannel <- entry
 	}
 
-	close(w.recoveryChannel)
+	close(w.RecoveryChannel)
 }
 
 func (w *WAL) setWriteOffset(bytesToWrite []byte) {
 	w.helperBuffer.Write(bytesToWrite)
 
 	offset := w.writeOffset
-	offset += w.helperBuffer.Len()
+	offset += int64(w.helperBuffer.Len())
 	w.writeOffset = offset
 
 	w.helperBuffer.Reset()

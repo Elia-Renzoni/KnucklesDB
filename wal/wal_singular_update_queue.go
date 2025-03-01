@@ -21,8 +21,8 @@ func (wl *WALLockFreeQueue) AddEntry(entry WALEntry) {
 func (wl *WALLockFreeQueue) EntryReader() {
 	for {
 		for i := 0; i < wl.cycleIterations; i++ {
-			entry := <- wl.lockFreeQueue
-			wl.wal.WriteWAL(entry.hash, entry.key, entry.value, entry.method)
+			entry := <-wl.lockFreeQueue
+			wl.wal.WriteWAL(entry)
 		}
 	}
 }

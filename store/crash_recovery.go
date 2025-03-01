@@ -1,43 +1,41 @@
-package recover
+package store
 
 import (
 	"knucklesdb/wal"
 )
 
 type Recover struct {
-	dbState *KnucklesMap
-	walAPI *wal.WALLockFreeQueue
+	walAPI             *wal.WALLockFreeQueue
 	walRecoveryChannel *wal.WAL
 }
 
-func NewRecover(db *KnucklesMap, wal *wal.WALLockFreeQueue, walChannel *WAL) *Recover {
+func NewRecover(wal *wal.WALLockFreeQueue, walChannel *wal.WAL) *Recover {
 	return &Recover{
-		db: db,
-		wal: wal,
+		walAPI:             wal,
 		walRecoveryChannel: walChannel,
 	}
 }
 
-func (r *Recover) SetOperationWAL(hash int32, key, value []byte) {
+func (r *Recover) SetOperationWAL(hash uint32, key, value []byte) {
 	entry := wal.NewWALEntry(hash, []byte("Set"), key, value)
 
 	r.walAPI.AddEntry(entry)
 }
 
-func (r *Recover) DeleteOperationWAL(hash int32, key, value []byte) {
+func (r *Recover) DeleteOperationWAL(hash uint32, key, value []byte) {
 	entry := wal.NewWALEntry(hash, []byte("Delete"), key, value)
 
 	r.walAPI.AddEntry(entry)
 }
 
-func (r *Recover) StartRecovery() {
+func (r *Recover) StartRecovery(dbState *KnucklesMap) {
 	go r.walRecoveryChannel.ScanLines()
 
 	for {
 		select {
-		case entryToRestore := <- r.walRecoveryChannel:
+		case entryToRestore := <-r.walRecoveryChannel.RecoveryChannel:
 			if entryToRestore.IsSet() {
-				r.dbState.Set(entryToRestore.key, entryToRestore.value)
+				dbState.Set(entryToRestore.Key, entryToRestore.Value)
 			}
 		// the channel is closed.
 		default:

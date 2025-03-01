@@ -1,14 +1,15 @@
 package main
 
 import (
-	"sync"
+	"flag"
+	"fmt"
 	"knucklesdb/server/node"
 	"knucklesdb/store"
 	"knucklesdb/swim"
-	"flag"
-	"time"
+	"knucklesdb/wal"
 	"strconv"
-	"fmt"
+	"sync"
+	"time"
 )
 
 func main() {
@@ -21,11 +22,43 @@ func main() {
 
 	flag.Parse()
 
+	walLogger := wal.NewWAL("")
+	queueUpdateLogger := wal.NewLockFreeQueue(walLogger)
+
 	joiner := swim.NewClusterManager()
 	marshaler := swim.NewProtocolMarshaler()
 	swimFailureDetector := swim.NewSWIMFailureDetector(joiner, marshaler, kHelperNodes, routineSchedulingTime, timeoutDuration)
-	
+
 	// add the server to the cluster.
+	/*
+		correctPort, _ := strconv.Atoi(*port)
+		ok, err := joiner.IsSeed(*host, correctPort)
+		if err != nil {
+			// TODO -> Write to WAL.
+			fmt.Printf("%v", err)
+		}
+
+		if !ok {
+			joiner.JoinRequest(*host, *port)
+		} else {
+			go swimFailureDetector.ClusterFailureDetection()
+		}*/
+
+	bufferPool := store.NewBufferPool()
+	addressBind := store.NewAddressBinder()
+	hashAlgorithm := store.NewSpookyHash(1)
+
+	failureDetector := store.NewDetectorBuffer(bufferPool, wg)
+	updateQueue := store.NewSingularUpdateQueue(failureDetector)
+	recover := store.NewRecover(queueUpdateLogger, walLogger)
+	storeMap := store.NewKnucklesMap(bufferPool, addressBind, hashAlgorithm, updateQueue, recover)
+	replica := node.NewReplica(*host, *port, storeMap, timeoutDuration, marshaler, joiner)
+
+	// start recovery session if needed
+	if full := walLogger.IsWALFull(); full {
+		recover.StartRecovery(storeMap)
+	}
+
 	correctPort, _ := strconv.Atoi(*port)
 	ok, err := joiner.IsSeed(*host, correctPort)
 	if err != nil {
@@ -38,15 +71,6 @@ func main() {
 	} else {
 		go swimFailureDetector.ClusterFailureDetection()
 	}
-
-	bufferPool := store.NewBufferPool()
-	addressBind := store.NewAddressBinder()
-	hashAlgorithm := store.NewSpookyHash(1)
-
-	failureDetector := store.NewDetectorBuffer(bufferPool, wg)
-	updateQueue := store.NewSingularUpdateQueue(failureDetector)
-	storeMap := store.NewKnucklesMap(bufferPool, addressBind, hashAlgorithm, updateQueue)
-	replica := node.NewReplica(*host, *port, storeMap, timeoutDuration, marshaler, joiner)
 
 	go failureDetector.ClockPageEviction()
 	go updateQueue.UpdateQueueReader()

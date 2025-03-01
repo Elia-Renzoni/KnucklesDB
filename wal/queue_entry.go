@@ -5,23 +5,23 @@ import (
 )
 
 type WALEntry struct {
-	method []byte
-	key    []byte
-	value  []byte
-	hash   int32
+	Method []byte
+	Key    []byte
+	Value  []byte
+	Hash   uint32
 }
 
-func NewWALEntry(hash int32, parameters ...[]byte) WALEntry {
+func NewWALEntry(hash uint32, parameters ...[]byte) WALEntry {
 	return WALEntry{
-		method: parameters[0],
-		key:    parameters[1],
-		value:  parameters[2],
-		hash:   hash,
+		Method: parameters[0],
+		Key:    parameters[1],
+		Value:  parameters[2],
+		Hash:   hash,
 	}
 }
 
 func (w WALEntry) IsSet() bool {
-	if bytes.ContainsAny(w.method, "Set") {
+	if bytes.ContainsAny(w.Method, "Set") {
 		return true
 	}
 	return false

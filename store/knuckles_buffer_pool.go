@@ -17,13 +17,10 @@ const (
 
 type BufferPool struct {
 	pages [MAX_PAGES]*Page
-	walAPI *Recover
 }
 
-func NewBufferPool(recoverAPI *Recover) *BufferPool {
-	return &BufferPool{
-		walAPI: recoverAPI,
-	}
+func NewBufferPool() *BufferPool {
+	return &BufferPool{}
 }
 
 /**
@@ -74,6 +71,5 @@ func (b *BufferPool) EvictPage(pageID int, key []byte) bool {
 		result bool
 	)
 	result = page.DeleteBucket(key)
-	// TODO : b.walAPI.DeleteOperationWAL()
 	return result
 }
