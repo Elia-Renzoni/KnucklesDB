@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"encoding/binary"
 )
 
 type WAL struct {
@@ -41,6 +42,7 @@ func (w *WAL) WriteWAL(toAppend WALEntry) {
 		err          error
 		buffer       [][]byte
 		entryToWrite []byte
+		bytesHash []byte = make([]byte, binary.MaxVarintLen64)
 	)
 
 	w.walFile, err = os.Open(w.path)
@@ -51,7 +53,9 @@ func (w *WAL) WriteWAL(toAppend WALEntry) {
 
 	entryOffset, ok := w.walHash[toAppend.Hash]
 	var newLine = bytes.NewBufferString("\n")
-	buffer = [][]byte{toAppend.Method, toAppend.Hash, toAppend.Key, toAppend.Value, newLine.Bytes()}
+	
+	binary.PutUvarint(bytesHash, uint64(toAppend.Hash))
+	buffer = [][]byte{toAppend.Method, bytesHash, toAppend.Key, toAppend.Value, newLine.Bytes()}
 	entryToWrite = bytes.Join(buffer, []byte(", "))
 	if ok {
 		w.walFile.WriteAt(entryToWrite, entryOffset)
