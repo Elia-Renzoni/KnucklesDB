@@ -8,6 +8,8 @@ import (
 	"fmt"
 )
 
+const SET, GET string = "set", "get"
+
 type KnucklesDBClient struct {
 	clientAddr string
 	clientListenPort string
@@ -39,26 +41,22 @@ func (k *KnucklesDBClient) Set(key, value []byte) error {
 
 	fmt.Printf("yooo")
 
-	/*if okKey := isEmpty(key); okKey {
+	if okKey := k.IsEmpty(key); okKey {
 		return errors.New("The Key is Empty!")
 	}
 
-	if okValue := isEmpty(value); okValue {
+	if okValue := k.IsEmpty(value); okValue {
 		return errors.New("The Value is Empty!")
-	}*/
+	}
 
 	fmt.Printf("yuuuuu")
 
 	joined := net.JoinHostPort(k.targetNodeAddr, k.targetNodeListenPort)
-	jsonValue, marshalError := json.Marshal(map[string]any{
-		"type": "set",
-		"key": key,
-		"value": value,
-	})
+	fmt.Printf(joined)
 
-	if marshalError != nil {
-		return marshalError
-	}
+	jsonValue := fmt.Sprintf(`{"type":"%s", "key":"%s", "value":"%s"}`, SET, string(key), string(value))
+
+	fmt.Println(string(jsonValue))
 
 	var err error
 	for {
@@ -70,7 +68,7 @@ func (k *KnucklesDBClient) Set(key, value []byte) error {
 		if err != nil {
 			return err
 		}
-		k.conn.Write(jsonValue)
+		k.conn.Write([]byte(jsonValue))
 
 		reply := make([]byte, 2024)
 		n, _ := k.conn.Read(reply)
@@ -88,7 +86,7 @@ func (k *KnucklesDBClient) Get(key []byte) (string, error) {
 		serverResponse ServerMessages 
 	)
 
-	if okKey := isEmpty(key); okKey {
+	if okKey := k.IsEmpty(key); okKey {
 		return "", errors.New("The Key is Empty!")
 	}
 
@@ -124,13 +122,13 @@ func (k *KnucklesDBClient) SetReplacers(nodes ...string) {
 
 }
 
-func isEmpty(bytesToCheck []byte) bool {
-	var resultToReturn bool
+func (k *KnucklesDBClient) IsEmpty(bytesToCheck []byte) bool {
+	var resultToReturn bool = true
 	for _, b := range bytesToCheck {
 		if b != 0 {
-			resultToReturn = true
-		} else {
 			resultToReturn = false
+		} else {
+			resultToReturn = true
 		}
 	}
 	return resultToReturn
