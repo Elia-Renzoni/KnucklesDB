@@ -88,7 +88,7 @@ func (r *Replica) serveRequest(conn net.Conn) {
 	}
 
 	if err := json.Unmarshal(buffer[:n], msg); err != nil {
-		// TODO -> write to WAL
+		fmt.Println("*****")
 		fmt.Printf("%v\n", err)
 	} else {
 		switch msg.MethodType {
@@ -118,6 +118,7 @@ func (r *Replica) handleConnection(conn net.Conn, message *Message) {
 
 	switch message.MethodType {
 	case "set":
+		fmt.Println(message.Key)
 		r.kMap.Set(message.Key, message.Value)
 		responsePayload, _ = json.Marshal(map[string]string{
 			"ack": "1",

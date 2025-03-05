@@ -8,11 +8,7 @@ import (
 	"fmt"
 )
 
-const SET, GET string = "set", "get"
-
 type KnucklesDBClient struct {
-	clientAddr string
-	clientListenPort string
 	targetNodeAddr string
 	targetNodeListenPort string
 	replacers []string
@@ -24,11 +20,8 @@ type ServerMessages struct {
 	Ack string `json:"ack"`
 }
 
-
-func NewClient(clientHost, clientListenPort string, targetNodeAddr, targetNodePort string, frequencyTime time.Duration) *KnucklesDBClient {
+func NewClient(targetNodeAddr, targetNodePort string, frequencyTime time.Duration) *KnucklesDBClient {
 	return &KnucklesDBClient{
-		clientAddr: clientHost,
-		clientListenPort: clientListenPort,
 		targetNodeAddr: targetNodeAddr,
 		targetNodeListenPort: targetNodePort,
 		replacers: make([]string, 0),
@@ -54,7 +47,11 @@ func (k *KnucklesDBClient) Set(key, value []byte) error {
 	joined := net.JoinHostPort(k.targetNodeAddr, k.targetNodeListenPort)
 	fmt.Printf(joined)
 
-	jsonValue := fmt.Sprintf(`{"type":"%s", "key":"%s", "value":"%s"}`, SET, string(key), string(value))
+	jsonValue, _ := json.Marshal(map[string]any{
+		"type": "set",
+		"key": key,
+		"value": value,
+	})
 
 	fmt.Println(string(jsonValue))
 
@@ -74,7 +71,7 @@ func (k *KnucklesDBClient) Set(key, value []byte) error {
 		n, _ := k.conn.Read(reply)
 		json.Unmarshal(reply[:n], &response)
 
-		fmt.Println(response.Ack)
+		fmt.Printf("Response: %s", response.Ack)
 		k.conn.Close()
 	}
 	return nil
