@@ -29,21 +29,6 @@ func main() {
 	marshaler := swim.NewProtocolMarshaler()
 	swimFailureDetector := swim.NewSWIMFailureDetector(joiner, marshaler, kHelperNodes, routineSchedulingTime, timeoutDuration)
 
-	// add the server to the cluster.
-	/*
-		correctPort, _ := strconv.Atoi(*port)
-		ok, err := joiner.IsSeed(*host, correctPort)
-		if err != nil {
-			// TODO -> Write to WAL.
-			fmt.Printf("%v", err)
-		}
-
-		if !ok {
-			joiner.JoinRequest(*host, *port)
-		} else {
-			go swimFailureDetector.ClusterFailureDetection()
-		}*/
-
 	bufferPool := store.NewBufferPool()
 	addressBind := store.NewAddressBinder()
 	hashAlgorithm := store.NewSpookyHash(1)
@@ -74,6 +59,7 @@ func main() {
 
 	go failureDetector.ClockPageEviction()
 	go updateQueue.UpdateQueueReader()
+	go queueUpdateLogger.EntryReader()
 
 	replica.Start()
 }

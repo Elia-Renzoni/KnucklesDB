@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"encoding/binary"
+	"fmt"
 )
 
 type WAL struct {
@@ -50,6 +51,8 @@ func (w *WAL) WriteWAL(toAppend WALEntry) {
 		return
 	}
 	defer w.walFile.Close()
+
+	fmt.Printf("*****")
 
 	entryOffset, ok := w.walHash[toAppend.Hash]
 	var newLine = bytes.NewBufferString("\n")
