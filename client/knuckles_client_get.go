@@ -1,8 +1,13 @@
 package client
 
+import (
+	"net"
+)
+
 
 type ClientGet struct {
 	targetNodeAddress string
+	conn net.Conn
 }
 
 type ServerMessages struct {
@@ -15,7 +20,7 @@ func NewClientGet(target string) *ClientGet {
 	}
 }
 
-func (c *ClientGet) GetData(key, value []byte) {
+func (c *ClientGet) GetData(key, value []byte) (string, error){
 	var (
 		err error
 		serverResponse ServerMessages 
@@ -34,18 +39,18 @@ func (c *ClientGet) GetData(key, value []byte) {
 		return "", marshalError
 	}
 
-	k.conn, err = net.Dial("tcp", c.targetNodeAddress)
+	c.conn, err = net.Dial("tcp", c.targetNodeAddress)
 	if err != nil {
 		return "", err
 	}
 
-	k.conn.Write(jsonGetValue)
+	c.conn.Write(jsonGetValue)
 
 	reply := make([]byte, 2024)
-	n, _ := k.conn.Read(reply)
+	n, _ := c.conn.Read(reply)
 	json.Unmarshal(reply[:n], &serverResponse)
 
-	k.conn.Close()
+	c.conn.Close()
 
 	return serverResponse.Ack, nil
 }
