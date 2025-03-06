@@ -51,8 +51,6 @@ func (w *WAL) WriteWAL(toAppend WALEntry) {
 	}
 	defer w.walFile.Close()
 
-	fmt.Printf("*****")
-
 	entryOffset, ok := w.walHash[toAppend.Hash]
 	var newLine = bytes.NewBufferString("\n")
 	
