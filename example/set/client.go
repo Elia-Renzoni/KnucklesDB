@@ -7,11 +7,13 @@ import (
 )
 
 func main() {
-	knucklesClient := client.NewClient("127.0.0.1", "5050", 3 * time.Second)
+	knucklesClient := client.NewClientSet("127.0.0.1:5050", 3 * time.Second)
 	
-	go func() {
-		err := knucklesClient.Set([]byte("/foo"), []byte("192.78.4.1"))
-		fmt.Println(err)
-	}()
+	for i := 0; i < 30; i++ {
+		go func() {
+			err := knucklesClient.Set([]byte("/foo"), []byte("192.78.4.1"))
+			fmt.Println(err)
+		}()
+	}
 	for {}
 }

@@ -2,6 +2,9 @@ package client
 
 import (
 	"net"
+	"errors"
+	"fmt"
+	"encoding/json"
 )
 
 
@@ -10,20 +13,20 @@ type ClientGet struct {
 	conn net.Conn
 }
 
-type ServerMessages struct {
+type ServerMessagesGet struct {
 	Ack string `json:"ack"`
 }
 
 func NewClientGet(target string) *ClientGet {
 	return &ClientGet{
-		targetNodeAddress: target
+		targetNodeAddress: target,
 	}
 }
 
-func (c *ClientGet) GetData(key, value []byte) (string, error){
+func (c *ClientGet) Get(key []byte) (string, error){
 	var (
 		err error
-		serverResponse ServerMessages 
+		serverResponse ServerMessagesGet
 	)
 
 	if okKey := c.IsEmpty(key); okKey {
@@ -50,6 +53,7 @@ func (c *ClientGet) GetData(key, value []byte) (string, error){
 	n, _ := c.conn.Read(reply)
 	json.Unmarshal(reply[:n], &serverResponse)
 
+	fmt.Println(string(reply))
 	c.conn.Close()
 
 	return serverResponse.Ack, nil

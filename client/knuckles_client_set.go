@@ -3,6 +3,9 @@ package client
 import (
 	"net"
 	"time"
+	"fmt"
+	"errors"
+	"encoding/json"
 )
 
 type ClientSet struct {
@@ -27,11 +30,11 @@ func (c *ClientSet) Set(key, value []byte) error {
 
 	fmt.Printf("yooo")
 
-	if okKey := k.IsEmpty(key); okKey {
+	if okKey := c.IsEmpty(key); okKey {
 		return errors.New("The Key is Empty!")
 	}
 
-	if okValue := k.IsEmpty(value); okValue {
+	if okValue := c.IsEmpty(value); okValue {
 		return errors.New("The Value is Empty!")
 	}
 
@@ -56,10 +59,22 @@ func (c *ClientSet) Set(key, value []byte) error {
 		c.conn.Write([]byte(jsonValue))
 
 		reply := make([]byte, 2024)
-		n, _ := k.conn.Read(reply)
+		n, _ := c.conn.Read(reply)
 		json.Unmarshal(reply[:n], &response)
 
 		c.conn.Close()
 	}
 	return nil
+}
+
+func (c *ClientSet) IsEmpty(bytesToCheck []byte) bool {
+	var resultToReturn bool = true
+	for _, b := range bytesToCheck {
+		if b != 0 {
+			resultToReturn = false
+		} else {
+			resultToReturn = true
+		}
+	}
+	return resultToReturn
 }
