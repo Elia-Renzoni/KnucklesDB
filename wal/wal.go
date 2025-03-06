@@ -11,7 +11,6 @@ import (
 )
 
 type WAL struct {
-	path        string
 	writeOffset int64
 	readOffset  int64
 
@@ -28,9 +27,8 @@ const (
 	READ
 )
 
-func NewWAL(filePath string) *WAL {
+func NewWAL() *WAL {
 	return &WAL{
-		path:            filePath,
 		writeOffset:     int64(0),
 		readOffset:      int64(0),
 		walHash:         make(map[uint32]int64),
@@ -46,8 +44,9 @@ func (w *WAL) WriteWAL(toAppend WALEntry) {
 		bytesHash []byte = make([]byte, binary.MaxVarintLen64)
 	)
 
-	w.walFile, err = os.Open(w.path)
+	w.walFile, err = os.OpenFile("wal.txt", os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
+		fmt.Println(err)
 		return
 	}
 	defer w.walFile.Close()
@@ -80,7 +79,7 @@ func (w *WAL) IsWALFull() bool {
 func (w *WAL) ScanLines() {
 	var err error
 
-	w.walFile, err = os.Open(w.path)
+	w.walFile, err = os.Open("wal.txt")
 	if err != nil {
 		return
 	}

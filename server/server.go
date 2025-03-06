@@ -22,7 +22,7 @@ func main() {
 
 	flag.Parse()
 
-	walLogger := wal.NewWAL("wal/wal.txt")
+	walLogger := wal.NewWAL()
 	queueUpdateLogger := wal.NewLockFreeQueue(walLogger)
 
 	joiner := swim.NewClusterManager()
