@@ -3,7 +3,6 @@ package client
 import (
 	"net"
 	"errors"
-	"fmt"
 	"encoding/json"
 )
 
@@ -53,7 +52,6 @@ func (c *ClientGet) Get(key []byte) (string, error){
 	n, _ := c.conn.Read(reply)
 	json.Unmarshal(reply[:n], &serverResponse)
 
-	fmt.Println(string(reply))
 	c.conn.Close()
 
 	return serverResponse.Ack, nil
