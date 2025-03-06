@@ -41,7 +41,7 @@ func (w *WAL) WriteWAL(toAppend WALEntry) {
 		err          error
 		buffer       [][]byte
 		entryToWrite []byte
-		bytesHash []byte = make([]byte, binary.MaxVarintLen64)
+		//bytesHash []byte = make([]byte, binary.MaxVarintLen64)
 	)
 
 	w.walFile, err = os.OpenFile("wal.txt", os.O_RDWR|os.O_CREATE, 0644)
@@ -54,9 +54,12 @@ func (w *WAL) WriteWAL(toAppend WALEntry) {
 	entryOffset, ok := w.walHash[toAppend.Hash]
 	var newLine = bytes.NewBufferString("\n")
 	
-	binary.PutUvarint(bytesHash, uint64(toAppend.Hash))
-	buffer = [][]byte{toAppend.Method, bytesHash, toAppend.Key, toAppend.Value, newLine.Bytes()}
+	//n := binary.PutUvarint(bytesHash, uint64(toAppend.Hash))
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.LittleEndian, toAppend.Hash)
+	buffer = [][]byte{toAppend.Method, buf.Bytes(), toAppend.Key, toAppend.Value, newLine.Bytes()}
 	entryToWrite = bytes.Join(buffer, []byte(", "))
+	fmt.Printf("%s", string(entryToWrite))
 	if ok {
 		w.walFile.WriteAt(entryToWrite, entryOffset)
 	} else {
