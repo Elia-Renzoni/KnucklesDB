@@ -15,3 +15,8 @@ Through the paginator algorithm, it is possible for a single replica to manage n
 
 ## Eventual Consistency
 KnucklesDB is a distributed, eventually consistent database, meaning it supports the weakest data consistency model. It can therefore be considered a distributed AP system that, in the event of a network partition, allows update operations on the database state at the cost of returning stale reads. Eventual consistency is achieved through the use of the gossip protocol, which is naturally eventually consistent; additionally, KnucklesDB also utilizes version vectors to handle write-write conflicts.
+
+## Leaderless Architecture
+KnucklesDB was designed and implemented with a leaderless architecture, meaning it consists of so-called flat groups—process groups in which replicas do not have well-defined roles relative to one another. Leader-based architectures are essential for ensuring a stronger data consistency model, such as Linearizability, Serializability, or even Sequential Consistency. However, since KnucklesDB is an eventually consistent database, using a primary-backup architecture would not have made sense. Such an approach would have also introduced additional overhead due to the need for distributed consensus protocols that assume fail-noisy conditions regarding the leader.
+
+Thanks to its architecture, KnucklesDB can be scaled horizontally with great ease and simplicity. This is particularly useful in unstructured P2P networks, where database failures could result in the loss of the entire network.
