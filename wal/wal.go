@@ -59,7 +59,7 @@ func (w *WAL) WriteWAL(toAppend WALEntry) {
 	binary.Write(buf, binary.LittleEndian, toAppend.Hash)
 	buffer = [][]byte{toAppend.Method, buf.Bytes(), toAppend.Key, toAppend.Value, newLine.Bytes()}
 	entryToWrite = bytes.Join(buffer, []byte(", "))
-	fmt.Printf("%s", string(entryToWrite))
+	//fmt.Printf("%s", string(entryToWrite))
 	if ok {
 		w.walFile.WriteAt(entryToWrite, entryOffset)
 	} else {

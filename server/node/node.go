@@ -118,7 +118,7 @@ func (r *Replica) handleConnection(conn net.Conn, message *Message) {
 
 	switch message.MethodType {
 	case "set":
-		fmt.Println(message.Key)
+		//fmt.Println(message.Key)
 		r.kMap.Set(message.Key, message.Value)
 		responsePayload, _ = json.Marshal(map[string]string{
 			"ack": "1",

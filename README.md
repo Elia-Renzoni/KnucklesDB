@@ -13,4 +13,5 @@ Through the paginator algorithm, it is possible for a single replica to manage n
 * KnucklesDB's crash recovery model is not based on full checkpointing, but rather on reading the WAL.
 * KnucklesDB cluster membership is based on the SWIM protocol.
 
-## Clock Paginator Algorithm
+## Eventual Consistency
+KnucklesDB is a distributed, eventually consistent database, meaning it supports the weakest data consistency model. It can therefore be considered a distributed AP system that, in the event of a network partition, allows update operations on the database state at the cost of returning stale reads. Eventual consistency is achieved through the use of the gossip protocol, which is naturally eventually consistent; additionally, KnucklesDB also utilizes version vectors to handle write-write conflicts.
