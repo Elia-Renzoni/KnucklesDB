@@ -25,3 +25,10 @@ Thanks to its architecture, KnucklesDB can be scaled horizontally with great eas
 KnucklesDB uses a paging algorithm that is an implementation of the clock algorithm with a second chance. This algorithm is scheduled every three seconds. In the first phase, it sets the flag related to each entry in memory to false. In the second phase, it checks the flags one last time—entries with a false flag will be removed from memory.
 
 This algorithm is particularly useful because it allows clients to set a heartbeat time that can be relatively high, such as four seconds.
+
+## WAL
+KnucklesDB uses a Write-Ahead Log (WAL) to achieve durability. Specifically, the WAL plays a vital role in reconstructing memory contents after a crash. The logger was designed with the assumption that set operations occur repeatedly at a predefined frequency of less than six seconds.
+
+This greatly simplified the implementation of the logger since, by using an offset storage system associated with hash keys, it was possible to eliminate the issue of the file potentially growing indefinitely. The module that implements the WAL stores hash keys and their corresponding offsets in a hash map. This way, write operations approach O(1) after the initial O(n) storage of data in the file.
+
+The WAL was implemented without global mutexes, as they can create bottlenecks and introduce latency in request execution. Instead, a mutual exclusion mechanism is implemented using the Singular Update Queue pattern.
