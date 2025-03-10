@@ -54,12 +54,10 @@ func (w *WAL) WriteWAL(toAppend WALEntry) {
 	entryOffset, ok := w.walHash[toAppend.Hash]
 	var newLine = bytes.NewBufferString("\n")
 	
-	//n := binary.PutUvarint(bytesHash, uint64(toAppend.Hash))
 	buf := new(bytes.Buffer)
 	binary.Write(buf, binary.LittleEndian, toAppend.Hash)
 	buffer = [][]byte{toAppend.Method, buf.Bytes(), toAppend.Key, toAppend.Value, newLine.Bytes()}
 	entryToWrite = bytes.Join(buffer, []byte(", "))
-	//fmt.Printf("%s", string(entryToWrite))
 	if ok {
 		w.walFile.WriteAt(entryToWrite, entryOffset)
 	} else {
@@ -116,6 +114,7 @@ func (w *WAL) setWriteOffset(bytesToWrite []byte) {
 
 	offset := w.writeOffset
 	offset += int64(w.helperBuffer.Len())
+	offset += int64(32)
 	w.writeOffset = offset
 
 	w.helperBuffer.Reset()
