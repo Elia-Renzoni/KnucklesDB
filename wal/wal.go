@@ -68,10 +68,16 @@ func (w *WAL) WriteWAL(toAppend WALEntry) {
 
 		w.walFile.WriteAt(entryToWrite, w.writeOffset)
 	}
+
+	for key, value := range w.walHash {
+		fmt.Printf("Key := %d --- Value := %d\n", key, value)
+	}
+
+	fmt.Printf("++++++++++ prova mappa +++++++++++++")
 }
 
 func (w *WAL) IsWALFull() bool {
-	fileContent, err := os.ReadFile("wal.txt")
+	_, err := os.ReadFile("wal.txt")
 	if err != nil {
 		return false
 	}

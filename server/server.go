@@ -41,6 +41,7 @@ func main() {
 
 	// start recovery session if needed
 	if full := walLogger.IsWALFull(); full {
+		fmt.Printf("here")
 		recover.StartRecovery(storeMap)
 	}
 

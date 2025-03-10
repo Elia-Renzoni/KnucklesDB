@@ -7,10 +7,10 @@ import (
 )
 
 func main() {
-	knucklesClient := client.NewClientGet("127.0.0.1:5050")
+	knucklesClient := client.NewClientGet("127.0.0.1:6060")
 	for {
 		time.Sleep(2 * time.Second)
-		result, err := knucklesClient.Get([]byte("/foo4"))
+		result, err := knucklesClient.Get([]byte("/foo31"))
 		if err != nil {
 			fmt.Printf("%v \n", err)
 		}

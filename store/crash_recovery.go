@@ -2,6 +2,7 @@ package store
 
 import (
 	"knucklesdb/wal"
+	"fmt"
 )
 
 type Recover struct {
@@ -34,6 +35,7 @@ func (r *Recover) StartRecovery(dbState *KnucklesMap) {
 	for {
 		select {
 		case entryToRestore := <-r.walRecoveryChannel.RecoveryChannel:
+			fmt.Println(string(entryToRestore.Key))
 			if entryToRestore.IsSet() {
 				dbState.Set(entryToRestore.Key, entryToRestore.Value)
 			}
