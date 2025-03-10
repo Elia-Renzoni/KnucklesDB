@@ -71,16 +71,18 @@ func (w *WAL) WriteWAL(toAppend WALEntry) {
 }
 
 func (w *WAL) IsWALFull() bool {
-	if len(w.walHash) > 0 {
-		return true
+	fileContent, err := os.ReadFile("wal.txt")
+	if err != nil {
+		return false
 	}
-	return false
+
+	return true
 }
 
 func (w *WAL) ScanLines() {
 	var err error
 
-	w.walFile, err = os.Open("wal.txt")
+	w.walFile, err = os.OpenFile("wal.txt", os.O_RDONLY, 0644)
 	if err != nil {
 		return
 	}
