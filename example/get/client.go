@@ -3,14 +3,13 @@ package main
 import (
 	"knucklesdb/client"
 	"fmt"
-	"time"
+	_"time"
 )
 
 func main() {
-	knucklesClient := client.NewClientGet("127.0.0.1:6060")
+	knucklesClient := client.NewClientGet("127.0.0.1:5050")
 	for {
-		time.Sleep(2 * time.Second)
-		result, err := knucklesClient.Get([]byte("/foo31"))
+		result, err := knucklesClient.Get([]byte("/foo6"))
 		if err != nil {
 			fmt.Printf("%v \n", err)
 		}

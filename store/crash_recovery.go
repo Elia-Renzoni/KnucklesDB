@@ -32,16 +32,18 @@ func (r *Recover) DeleteOperationWAL(hash uint32, key, value []byte) {
 func (r *Recover) StartRecovery(dbState *KnucklesMap) {
 	go r.walRecoveryChannel.ScanLines()
 
-	for {
-		select {
-		case entryToRestore := <-r.walRecoveryChannel.RecoveryChannel:
-			fmt.Println(string(entryToRestore.Key))
-			if entryToRestore.IsSet() {
-				dbState.Set(entryToRestore.Key, entryToRestore.Value)
+	go func() {
+		for {
+			select {
+			case entryToRestore := <-r.walRecoveryChannel.RecoveryChannel:
+				if entryToRestore.IsSet() {
+					fmt.Println(string(entryToRestore.Key))
+					dbState.Set(entryToRestore.Key, entryToRestore.Value)
+				}
+			// the channel is closed.
+			default:
+				break
 			}
-		// the channel is closed.
-		default:
-			break
 		}
-	}
+	}()
 }

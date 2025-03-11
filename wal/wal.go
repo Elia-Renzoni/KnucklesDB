@@ -41,7 +41,6 @@ func (w *WAL) WriteWAL(toAppend WALEntry) {
 		err          error
 		buffer       [][]byte
 		entryToWrite []byte
-		//bytesHash []byte = make([]byte, binary.MaxVarintLen64)
 	)
 
 	w.walFile, err = os.OpenFile("wal.txt", os.O_RDWR|os.O_CREATE, 0644)
@@ -66,12 +65,6 @@ func (w *WAL) WriteWAL(toAppend WALEntry) {
 
 		w.walFile.WriteAt(entryToWrite, w.writeOffset)
 	}
-
-	for key, value := range w.walHash {
-		fmt.Printf("Key := %d --- Value := %d\n", key, value)
-	}
-
-	fmt.Printf("++++++++++ prova mappa +++++++++++++")
 }
 
 func (w *WAL) IsWALFull() bool {
