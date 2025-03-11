@@ -113,6 +113,11 @@ func (w *WAL) ScanLines() {
 	}
 
 	close(w.RecoveryChannel)
+	
+	errRemove := os.Remove("server/wal.txt")
+	if errRemove != nil {
+		// TODO: write to error's WAL.
+	}
 }
 
 /*
