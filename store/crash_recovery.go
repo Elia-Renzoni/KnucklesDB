@@ -1,3 +1,10 @@
+/**
+*	This file contains the implementation of the singular update queue pattern used for
+*	avoiding to use a mutex that control the WAL. 
+*	The implementation provide methods to write the Set and the Delete operation and also
+*	provide a method to start the recovery session.
+*/
+
 package store
 
 import (
@@ -6,7 +13,11 @@ import (
 )
 
 type Recover struct {
+	// singular update queue for communicating
+	// with the WAL.
 	walAPI             *wal.WALLockFreeQueue
+	
+	// WAL file
 	walRecoveryChannel *wal.WAL
 }
 
@@ -29,9 +40,17 @@ func (r *Recover) DeleteOperationWAL(hash uint32, key, value []byte) {
 	r.walAPI.AddEntry(entry)
 }
 
+
+/**
+*	@brief this method starts a producer and a consumer goroutine.
+*   @param instance of the actual store.
+*/
 func (r *Recover) StartRecovery(dbState *KnucklesMap) {
+	// start the producer
 	go r.walRecoveryChannel.ScanLines()
 
+	// start the consumer that will restore the memory content after
+	// a crash.
 	go func() {
 		for {
 			select {
