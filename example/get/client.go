@@ -1,19 +1,56 @@
 package main
 
 import (
-	"knucklesdb/client"
 	"fmt"
-	_"time"
+	"time"
+	"encoding/json"
+	"net"
 )
 
+type ServerMessagesGet struct {
+	Ack string `json:"ack"`
+}
+
 func main() {
-	knucklesClient := client.NewClientGet("127.0.0.1:5050")
 	for {
-		result, err := knucklesClient.Get([]byte("/foo6"))
+		/*result, err := knucklesClient.Get([]byte("/foo6"))
 		if err != nil {
 			fmt.Printf("%v \n", err)
 		}
 
-		fmt.Printf("%s", result)
+		time.Sleep(2 *time.Second)
+		fmt.Printf("%s", result)*/
+
+		time.Sleep(2 *time.Second)
+
+		var (
+			err error
+			serverResponse ServerMessagesGet
+		)
+
+		jsonGetValue, marshalError := json.Marshal(map[string]any{
+			"type": "get",
+			"key": []byte("/foo6"),
+		})
+
+		if marshalError != nil {
+			return
+		}
+
+		conn, err := net.Dial("tcp", "127.0.0.1:5050")
+		if err != nil {
+			return
+		}
+
+		conn.Write(jsonGetValue)
+
+		reply := make([]byte, 2024)
+		n, _ := conn.Read(reply)
+		json.Unmarshal(reply[:n], &serverResponse)
+
+		fmt.Println(serverResponse)
+
+		conn.Close()
+
 	}
 }

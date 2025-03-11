@@ -129,8 +129,8 @@ func (r *Replica) handleConnection(conn net.Conn, message *Message) {
 				"ack": getErr.Error(),
 			})
 		} else {
-			responsePayload, _ = json.Marshal(map[string][]byte{
-				"ack": value,
+			responsePayload, _ = json.Marshal(map[string]string{
+				"ack": string(value),
 			})
 		}
 	}

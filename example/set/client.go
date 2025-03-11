@@ -7,9 +7,9 @@ import (
 )
 
 func main() {
-	knucklesClient := client.NewClientSet("127.0.0.1:5050", 10 * time.Second)
+	knucklesClient := client.NewClientSet("127.0.0.1:5050", 1 * time.Second)
 	
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 10; i++ {
 		go func() {
 			err := knucklesClient.Set([]byte(fmt.Sprintf("%s%d", "/foo", i)), []byte("192.78.4.1"))
 			fmt.Println(err)
