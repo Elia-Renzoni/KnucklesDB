@@ -4,9 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"os"
-	"strconv"
 	"strings"
-	"encoding/binary"
 	"fmt"
 )
 
@@ -53,9 +51,7 @@ func (w *WAL) WriteWAL(toAppend WALEntry) {
 	entryOffset, ok := w.walHash[toAppend.Hash]
 	var newLine = bytes.NewBufferString("\n")
 	
-	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.LittleEndian, toAppend.Hash)
-	buffer = [][]byte{toAppend.Method, buf.Bytes(), toAppend.Key, toAppend.Value, newLine.Bytes()}
+	buffer = [][]byte{toAppend.Method, toAppend.Key, toAppend.Value, newLine.Bytes()}
 	entryToWrite = bytes.Join(buffer, []byte(", "))
 	if ok {
 		w.walFile.WriteAt(entryToWrite, entryOffset)
@@ -91,11 +87,10 @@ func (w *WAL) ScanLines() {
 		splittedText := strings.Split(scannedText, ", ")
 
 		method := []byte(splittedText[0])
-		hash, _ := strconv.Atoi(splittedText[1])
-		key := []byte(splittedText[2])
-		value := []byte(splittedText[3])
+		key := []byte(splittedText[1])
+		value := []byte(splittedText[2])
 
-		entry := NewWALEntry(uint32(hash), method, key, value)
+		entry := NewWALEntry(uint32(0), method, key, value)
 		w.RecoveryChannel <- entry
 	}
 

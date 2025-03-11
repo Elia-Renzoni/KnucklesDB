@@ -8,7 +8,7 @@ type WALEntry struct {
 	Method []byte
 	Key    []byte
 	Value  []byte
-	Hash   uint32
+	Hash uint32
 }
 
 func NewWALEntry(hash uint32, parameters ...[]byte) WALEntry {
@@ -16,7 +16,7 @@ func NewWALEntry(hash uint32, parameters ...[]byte) WALEntry {
 		Method: parameters[0],
 		Key:    parameters[1],
 		Value:  parameters[2],
-		Hash:   hash,
+		Hash: hash,
 	}
 }
 
