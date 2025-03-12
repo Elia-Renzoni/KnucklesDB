@@ -7,6 +7,7 @@ package wal
 
 import (
 	"log"
+	"os"
 )
 
 type ErrorsLogger struct {
@@ -15,7 +16,7 @@ type ErrorsLogger struct {
 
 func NewErrorsLogger() *ErrorsLogger {
 	return &ErrorsLogger{
-		errLogger: log.New("errors.log", "ERROR: ", log.Ldate|log.Ltime),
+		errLogger: log.New(os.Stdout, "ERROR: ", log.Ldate|log.Ltime),
 	}
 }
 

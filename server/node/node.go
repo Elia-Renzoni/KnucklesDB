@@ -9,6 +9,7 @@ import (
 	"net"
 	"strconv"
 	"time"
+	"knucklesdb/wal"
 
 	id "github.com/google/uuid"
 )

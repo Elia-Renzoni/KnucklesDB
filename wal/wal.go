@@ -12,7 +12,7 @@ import (
 	"bytes"
 	"os"
 	"strings"
-	"fmt"
+	_"fmt"
 )
 
 type WAL struct {
