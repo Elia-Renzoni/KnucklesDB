@@ -48,7 +48,6 @@ func NewClusterManager(logger *wal.ErrorsLogger) *ClusterManager {
 func (c *ClusterManager) JoinRequest(host, port string) {
 	var ackResult AckMessage
 	seedInfo := c.getSeedNodeHostPort()
-	fmt.Println(seedInfo)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	// by using an infinite loop we create a stubbon link
@@ -154,7 +153,6 @@ func (c *ClusterManager) IsSeed(address string, port int) (bool, error) {
 		return false, err
 	}
 
-	fmt.Printf("%s - %d", seedNodeInfo.SeedNodeAddress, seedNodeInfo.SeedNodeListenPort)
 
 	if seedNodeInfo.SeedNodeAddress == address && seedNodeInfo.SeedNodeListenPort == port {
 		return true, nil

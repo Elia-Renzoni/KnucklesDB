@@ -77,6 +77,7 @@ func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
 				if sysErr.Err == syscall.ECONNREFUSED {
 					s.changeNodeState(nodeHost, strconv.Itoa(nodeListenPort), STATUS_SUSPICIOUS)
 					go s.piggyBack(joined)
+					s.logger.ReportInfo("Sending Help Request to K Nodes")
 					return
 				}
 			}
@@ -96,6 +97,7 @@ func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
 		s.changeNodeState(nodeHost, strconv.Itoa(nodeListenPort), STATUS_SUSPICIOUS)
 		// TODO -> start a gossip cycle
 		go s.piggyBack(joined)
+		s.logger.ReportInfo("Sending Help Request to K Nodes")
 	default:
 		count, _ := conn.Read(replyData)
 		json.Unmarshal(replyData[:count], &s.swimMessageAck)
@@ -210,6 +212,7 @@ func (s *SWIMFailureDetector) ClusterFailureDetection() {
 	s.logger.ReportInfo("SWIM Protocol On")
 	for {
 		time.Sleep(s.swimSchedule)
+		s.logger.ReportInfo("Failure Detection ON")
 
 		for _, node := range s.nodesList.clusterMetadata {
 			if node != nil {

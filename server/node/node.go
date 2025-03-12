@@ -153,7 +153,7 @@ func (r *Replica) handleSWIMProtocolConnection(conn net.Conn, buffer []byte, met
 }
 
 func (r *Replica) HandlePingSWIMMessage(conn net.Conn) {
-	fmt.Printf("%s \n", "ping message arrived")
+	r.infoLogger.ReportInfo("Ping Message Arrived")
 	jsonAckValueToSend, err := r.swimMarshaler.MarshalAckMessage(1)
 	if err != nil {
 		r.logger.ReportError(err)
@@ -162,7 +162,8 @@ func (r *Replica) HandlePingSWIMMessage(conn net.Conn) {
 }
 
 func (r *Replica) HandlePiggyBackSWIMMessage(conn net.Conn, buffer []byte, bufferLength int) {
-
+	r.infoLogger.ReportInfo("PiggyBack Message Arrived")
+	
 	if err := json.Unmarshal(buffer[:bufferLength], &r.protocolMessages.PiggyBackMsg); err != nil {
 		r.logger.ReportError(err)
 	}
@@ -205,6 +206,8 @@ func (r *Replica) HandleSWIMFailureDetectionMessage(buffer []byte, bufferLength 
 }
 
 func (r *Replica) handleJoinMembershipMessage(conn net.Conn, buffer []byte, bufferLength int) {
+	r.infoLogger.ReportInfo("Join Message Arrived")
+
 	json.Unmarshal(buffer[:bufferLength], &r.protocolMessages.JoinRequest)
 	converted, err := strconv.Atoi(r.protocolMessages.JoinRequest.ListenPort)
 	fmt.Println(converted)
