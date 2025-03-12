@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"syscall"
 	"os"
+	"knucklesdb/wal"
 )
 
 type SWIMFailureDetector struct {
@@ -40,16 +41,19 @@ type SWIMFailureDetector struct {
 
 	// timeout time
 	timeoutTime time.Duration
+
+	logger *wal.InfoLogger
 }
 
 func NewSWIMFailureDetector(nodes *ClusterManager, marshaler *ProtocolMarshaer, helperNodes int,
-	sleepTime, timeoutBoundaries time.Duration) *SWIMFailureDetector {
+	sleepTime, timeoutBoundaries time.Duration, logger *wal.InfoLogger) *SWIMFailureDetector {
 	return &SWIMFailureDetector{
 		nodesList:    nodes,
 		marshaler:    marshaler,
 		kHelperNodes: helperNodes,
 		swimSchedule: sleepTime,
 		timeoutTime:  timeoutBoundaries,
+		logger: logger,
 	}
 }
 
@@ -203,6 +207,7 @@ func (s *SWIMFailureDetector) changeNodeState(nodeHost, nodePort string, nodeUpd
 // this method represent the goroutine that has to be called
 // by the server
 func (s *SWIMFailureDetector) ClusterFailureDetection() {
+	s.logger.ReportInfo("SWIM Protocol On")
 	for {
 		time.Sleep(s.swimSchedule)
 

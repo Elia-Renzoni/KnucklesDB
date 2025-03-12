@@ -19,12 +19,15 @@ type Recover struct {
 	
 	// WAL file
 	walRecoveryChannel *wal.WAL
+
+	logger *wal.InfoLogger
 }
 
-func NewRecover(wal *wal.WALLockFreeQueue, walChannel *wal.WAL) *Recover {
+func NewRecover(wal *wal.WALLockFreeQueue, walChannel *wal.WAL, logger *wal.InfoLogger) *Recover {
 	return &Recover{
 		walAPI:             wal,
 		walRecoveryChannel: walChannel,
+		logger: logger,
 	}
 }
 
@@ -46,6 +49,7 @@ func (r *Recover) DeleteOperationWAL(hash uint32, key, value []byte) {
 *   @param instance of the actual store.
 */
 func (r *Recover) StartRecovery(dbState *KnucklesMap) {
+	r.logger.ReportInfo("Starting Recovery Session")
 	// start the producer
 	go r.walRecoveryChannel.ScanLines()
 
@@ -64,5 +68,6 @@ func (r *Recover) StartRecovery(dbState *KnucklesMap) {
 				break
 			}
 		}
+		r.logger.ReportInfo("Recovery Sessione Ended")
 	}()
 }

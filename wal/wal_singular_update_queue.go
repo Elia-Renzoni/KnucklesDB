@@ -7,21 +7,19 @@
 
 package wal
 
-import (
-	"fmt"
-)
-
 type WALLockFreeQueue struct {
 	lockFreeQueue   chan WALEntry
 	cycleIterations int
 	wal             *WAL
+	logger *InfoLogger
 }
 
-func NewLockFreeQueue(wal *WAL) *WALLockFreeQueue {
+func NewLockFreeQueue(wal *WAL, logger *InfoLogger) *WALLockFreeQueue {
 	return &WALLockFreeQueue{
 		lockFreeQueue:   make(chan WALEntry, 100),
 		cycleIterations: 5,
 		wal:             wal,
+		logger: logger,
 	}
 }
 
@@ -30,7 +28,7 @@ func (wl *WALLockFreeQueue) AddEntry(entry WALEntry) {
 }
 
 func (wl *WALLockFreeQueue) EntryReader() {
-	fmt.Printf("ON...")
+	wl.logger.ReportInfo("WAL Reader On")	
 	for {
 		for i := 0; i < wl.cycleIterations; i++ {
 			entry := <-wl.lockFreeQueue

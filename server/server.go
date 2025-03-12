@@ -23,12 +23,14 @@ func main() {
 	flag.Parse()
 
 	errorsLogger := wal.NewErrorsLogger()
+	infoLogger := wal.NewInfoLogger()
+
 	walLogger := wal.NewWAL(errorsLogger)
-	queueUpdateLogger := wal.NewLockFreeQueue(walLogger)
+	queueUpdateLogger := wal.NewLockFreeQueue(walLogger, infoLogger)
 
 	joiner := swim.NewClusterManager(errorsLogger)
 	marshaler := swim.NewProtocolMarshaler()
-	swimFailureDetector := swim.NewSWIMFailureDetector(joiner, marshaler, kHelperNodes, routineSchedulingTime, timeoutDuration)
+	swimFailureDetector := swim.NewSWIMFailureDetector(joiner, marshaler, kHelperNodes, routineSchedulingTime, timeoutDuration, infoLogger)
 
 	bufferPool := store.NewBufferPool()
 	addressBind := store.NewAddressBinder()
@@ -36,9 +38,9 @@ func main() {
 
 	failureDetector := store.NewDetectorBuffer(bufferPool, wg)
 	updateQueue := store.NewSingularUpdateQueue(failureDetector)
-	recover := store.NewRecover(queueUpdateLogger, walLogger)
+	recover := store.NewRecover(queueUpdateLogger, walLogger, infoLogger)
 	storeMap := store.NewKnucklesMap(bufferPool, addressBind, hashAlgorithm, updateQueue, recover)
-	replica := node.NewReplica(*host, *port, storeMap, timeoutDuration, marshaler, joiner, errorsLogger)
+	replica := node.NewReplica(*host, *port, storeMap, timeoutDuration, marshaler, joiner, errorsLogger, infoLogger)
 
 	// start recovery session if needed
 	if full := walLogger.IsWALFull(); full {

@@ -24,6 +24,7 @@ type Replica struct {
 	swimMarshaler    *swim.ProtocolMarshaer
 	clusterJoiner    *swim.ClusterManager
 	logger 			 *wal.ErrorsLogger
+	infoLogger *wal.InfoLogger
 }
 
 type SwimProtocolMessages struct {
@@ -39,7 +40,8 @@ type Message struct {
 }
 
 func NewReplica(address string, port string, dbMap *store.KnucklesMap, timeout time.Duration,
-	marshaler *swim.ProtocolMarshaer, clusterData *swim.ClusterManager, errLogger *wal.ErrorsLogger) *Replica {
+	marshaler *swim.ProtocolMarshaer, clusterData *swim.ClusterManager, errLogger *wal.ErrorsLogger,
+	infosLog *wal.InfoLogger) *Replica {
 	return &Replica{
 		replicaID:     id.New(),
 		address:       address,
@@ -49,6 +51,7 @@ func NewReplica(address string, port string, dbMap *store.KnucklesMap, timeout t
 		swimMarshaler: marshaler,
 		clusterJoiner: clusterData,
 		logger:        errLogger,
+		infoLogger: 	infosLog,
 	}
 }
 
@@ -58,7 +61,7 @@ func (r *Replica) Start() {
 		r.logger.ReportError(err)
 	}
 
-	fmt.Printf("Server Listening...\n")
+	r.infoLogger.ReportInfo("Server Listening")
 
 	for {
 		conn, err := ln.Accept()
