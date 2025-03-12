@@ -50,7 +50,7 @@ func (c *ClientSet) Set(key, value []byte) error {
 	for {
 		time.Sleep(c.sleepInterval)
 
-		fmt.Printf("foo")
+		//fmt.Printf("foo")
 
 		c.conn, err = net.Dial("tcp", c.targetNodeAddress)
 		if err != nil {
