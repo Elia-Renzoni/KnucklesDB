@@ -13,6 +13,7 @@ import (
 	"os"
 	"time"
 	"strconv"
+	"knucklesdb/wal"
 
 	"slices"
 	"gopkg.in/yaml.v3"
@@ -23,6 +24,7 @@ type ClusterManager struct {
 	// that have joined the cluster.
 	clusterMetadata []*Node
 	marshaler       ProtocolMarshaer
+	logger         *wal.ErrorsLogger
 	// TODO -> gossip field...
 }
 
@@ -31,9 +33,10 @@ type SeedNodeMetadata struct {
 	SeedNodeListenPort int    `yaml:"seed_listen_port"`
 }
 
-func NewClusterManager() *ClusterManager {
+func NewClusterManager(logger *wal.ErrorsLogger) *ClusterManager {
 	return &ClusterManager{
 		clusterMetadata: make([]*Node, 0),
+		logger: logger,
 	}
 }
 
@@ -52,7 +55,7 @@ func (c *ClusterManager) JoinRequest(host, port string) {
 	for {
 		conn, err := net.Dial("tcp", seedInfo)
 		if err != nil {
-			fmt.Printf("%v", err)
+			c.logger.ReportError(err)
 		}
 		data, _ := c.marshaler.MarshalJoinMessage(host, port)
 		conn.Write(data)

@@ -23,16 +23,18 @@ type WAL struct {
 	walHash      map[uint32]int64
 	walFile      *os.File
 	helperBuffer bytes.Buffer
+	logger *ErrorsLogger
 
 	RecoveryChannel chan WALEntry
 }
 
 
-func NewWAL() *WAL {
+func NewWAL(logger *ErrorsLogger) *WAL {
 	return &WAL{
 		writeOffset:     int64(0),
 		readOffset:      int64(0),
 		walHash:         make(map[uint32]int64),
+		logger:          logger,
 		RecoveryChannel: make(chan WALEntry),
 	}
 }
@@ -50,7 +52,7 @@ func (w *WAL) WriteWAL(toAppend WALEntry) {
 
 	w.walFile, err = os.OpenFile("wal.txt", os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
-		fmt.Println(err)
+		w.logger.ReportError(err)
 		return
 	}
 	defer w.walFile.Close()
@@ -95,6 +97,7 @@ func (w *WAL) ScanLines() {
 
 	w.walFile, err = os.OpenFile("wal.txt", os.O_RDONLY, 0644)
 	if err != nil {
+		w.logger.ReportError(err)
 		return
 	}
 	defer w.walFile.Close()
@@ -116,7 +119,7 @@ func (w *WAL) ScanLines() {
 	
 	errRemove := os.Remove("server/wal.txt")
 	if errRemove != nil {
-		// TODO: write to error's WAL.
+		w.logger.ReportError(errRemove)
 	}
 }
 

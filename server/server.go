@@ -23,10 +23,10 @@ func main() {
 	flag.Parse()
 
 	errorsLogger := wal.NewErrorsLogger()
-	walLogger := wal.NewWAL()
+	walLogger := wal.NewWAL(errorsLogger)
 	queueUpdateLogger := wal.NewLockFreeQueue(walLogger)
 
-	joiner := swim.NewClusterManager()
+	joiner := swim.NewClusterManager(errorsLogger)
 	marshaler := swim.NewProtocolMarshaler()
 	swimFailureDetector := swim.NewSWIMFailureDetector(joiner, marshaler, kHelperNodes, routineSchedulingTime, timeoutDuration)
 
