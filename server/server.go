@@ -22,6 +22,7 @@ func main() {
 
 	flag.Parse()
 
+	errorsLogger := wal.NewErrorsLogger()
 	walLogger := wal.NewWAL()
 	queueUpdateLogger := wal.NewLockFreeQueue(walLogger)
 
@@ -37,7 +38,7 @@ func main() {
 	updateQueue := store.NewSingularUpdateQueue(failureDetector)
 	recover := store.NewRecover(queueUpdateLogger, walLogger)
 	storeMap := store.NewKnucklesMap(bufferPool, addressBind, hashAlgorithm, updateQueue, recover)
-	replica := node.NewReplica(*host, *port, storeMap, timeoutDuration, marshaler, joiner)
+	replica := node.NewReplica(*host, *port, storeMap, timeoutDuration, marshaler, joiner, errorsLogger)
 
 	// start recovery session if needed
 	if full := walLogger.IsWALFull(); full {
@@ -48,8 +49,7 @@ func main() {
 	correctPort, _ := strconv.Atoi(*port)
 	ok, err := joiner.IsSeed(*host, correctPort)
 	if err != nil {
-		// TODO -> Write to WAL.
-		fmt.Printf("%v", err)
+		errorsLogger.ReportError(err)
 	}
 
 	if !ok {

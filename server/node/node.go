@@ -22,6 +22,7 @@ type Replica struct {
 	timeoutTime      time.Duration
 	swimMarshaler    *swim.ProtocolMarshaer
 	clusterJoiner    *swim.ClusterManager
+	logger 			 *wal.ErrorsLogger
 }
 
 type SwimProtocolMessages struct {
@@ -37,7 +38,7 @@ type Message struct {
 }
 
 func NewReplica(address string, port string, dbMap *store.KnucklesMap, timeout time.Duration,
-	marshaler *swim.ProtocolMarshaer, clusterData *swim.ClusterManager) *Replica {
+	marshaler *swim.ProtocolMarshaer, clusterData *swim.ClusterManager, errLogger *wal.ErrorsLogger) *Replica {
 	return &Replica{
 		replicaID:     id.New(),
 		address:       address,
@@ -46,14 +47,14 @@ func NewReplica(address string, port string, dbMap *store.KnucklesMap, timeout t
 		timeoutTime:   timeout,
 		swimMarshaler: marshaler,
 		clusterJoiner: clusterData,
+		logger:        errLogger,
 	}
 }
 
 func (r *Replica) Start() {
 	ln, err := net.Listen("tcp", net.JoinHostPort(r.address, r.listenPort))
 	if err != nil {
-		// TODO -> write error message in the WAL
-		fmt.Printf("In the replica %s occurred %v", r.replicaID.String(), err)
+		r.logger.ReportError(err)
 	}
 
 	fmt.Printf("Server Listening...\n")
@@ -62,8 +63,7 @@ func (r *Replica) Start() {
 		conn, err := ln.Accept()
 
 		if err != nil {
-			// TODO -> write error message in WAL
-			fmt.Printf("%v", err)
+			r.logger.ReportError(err)
 		}
 
 		r.serveRequest(conn)
@@ -83,13 +83,11 @@ func (r *Replica) serveRequest(conn net.Conn) {
 	buffer = make([]byte, 2040)
 	n, err := conn.Read(buffer)
 	if err != nil {
-		// TODO -> write error message in WAL
-		fmt.Printf("%v", err)
+		r.logger.ReportError(err)
 	}
 
 	if err := json.Unmarshal(buffer[:n], msg); err != nil {
-		fmt.Println("*****")
-		fmt.Printf("%v\n", err)
+		r.logger.ReportError(err)
 	} else {
 		switch msg.MethodType {
 		case "swim", "ping", "piggyback":
@@ -118,7 +116,6 @@ func (r *Replica) handleConnection(conn net.Conn, message *Message) {
 
 	switch message.MethodType {
 	case "set":
-		//fmt.Println(message.Key)
 		r.kMap.Set(message.Key, message.Value)
 		responsePayload, _ = json.Marshal(map[string]string{
 			"ack": "1",
@@ -155,7 +152,7 @@ func (r *Replica) HandlePingSWIMMessage(conn net.Conn) {
 	fmt.Printf("%s \n", "ping message arrived")
 	jsonAckValueToSend, err := r.swimMarshaler.MarshalAckMessage(1)
 	if err != nil {
-		// Write to WAL.
+		r.logger.ReportError(err)
 	}
 	conn.Write(jsonAckValueToSend)
 }
@@ -163,7 +160,7 @@ func (r *Replica) HandlePingSWIMMessage(conn net.Conn) {
 func (r *Replica) HandlePiggyBackSWIMMessage(conn net.Conn, buffer []byte, bufferLength int) {
 
 	if err := json.Unmarshal(buffer[:bufferLength], &r.protocolMessages.PiggyBackMsg); err != nil {
-		// TODO -> Write Error Message to WAL.
+		r.logger.ReportError(err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), r.timeoutTime)
@@ -172,7 +169,7 @@ func (r *Replica) HandlePiggyBackSWIMMessage(conn net.Conn, buffer []byte, buffe
 	connHelper, err := net.Dial("tcp", r.protocolMessages.PiggyBackMsg.TargetNode)
 
 	if err != nil {
-		// TODO -> Write to WAL
+		r.logger.ReportError(err)
 		jsonValueNeg, _ := r.swimMarshaler.MarshalAckMessage(0)
 		conn.Write(jsonValueNeg)
 		return 
@@ -181,7 +178,7 @@ func (r *Replica) HandlePiggyBackSWIMMessage(conn net.Conn, buffer []byte, buffe
 
 	jsonEncodedPing, err := r.swimMarshaler.MarshalPing()
 	if err != nil {
-		// TODO -> Write to WAL
+		r.logger.ReportError(err)
 	}
 
 	connHelper.Write(jsonEncodedPing)
