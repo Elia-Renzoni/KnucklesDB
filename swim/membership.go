@@ -8,7 +8,6 @@ package swim
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net"
 	"os"
 	"time"
@@ -68,7 +67,6 @@ func (c *ClusterManager) JoinRequest(host, port string) {
 		default:
 			count, _ := conn.Read(reply)
 			json.Unmarshal(reply[:count], &ackResult)
-			fmt.Println(ackResult)
 		}
 		break
 	}
