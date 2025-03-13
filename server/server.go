@@ -30,7 +30,7 @@ func main() {
 
 	joiner := swim.NewClusterManager(errorsLogger)
 	marshaler := swim.NewProtocolMarshaler()
-	swimFailureDetector := swim.NewSWIMFailureDetector(joiner, marshaler, kHelperNodes, routineSchedulingTime, timeoutDuration, infoLogger)
+	swimFailureDetector := swim.NewSWIMFailureDetector(joiner, marshaler, kHelperNodes, routineSchedulingTime, timeoutDuration, infoLogger, errorsLogger)
 
 	bufferPool := store.NewBufferPool()
 	addressBind := store.NewAddressBinder()

@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"syscall"
 	"os"
+	"errors"
 	"knucklesdb/wal"
 )
 
@@ -43,10 +44,12 @@ type SWIMFailureDetector struct {
 	timeoutTime time.Duration
 
 	logger *wal.InfoLogger
+
+	errLogger *wal.ErrorsLogger
 }
 
 func NewSWIMFailureDetector(nodes *ClusterManager, marshaler *ProtocolMarshaer, helperNodes int,
-	sleepTime, timeoutBoundaries time.Duration, logger *wal.InfoLogger) *SWIMFailureDetector {
+	sleepTime, timeoutBoundaries time.Duration, logger *wal.InfoLogger, errLog *wal.ErrorsLogger) *SWIMFailureDetector {
 	return &SWIMFailureDetector{
 		nodesList:    nodes,
 		marshaler:    marshaler,
@@ -54,6 +57,7 @@ func NewSWIMFailureDetector(nodes *ClusterManager, marshaler *ProtocolMarshaer, 
 		swimSchedule: sleepTime,
 		timeoutTime:  timeoutBoundaries,
 		logger: logger,
+		errLogger: errLog,
 	}
 }
 
@@ -71,7 +75,7 @@ func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
 	conn, err := net.Dial("tcp", joined)
 
 	if err != nil {
-		// do something... write in WAL
+		s.errLogger.ReportError(err)
 		if opErr, ok := err.(*net.OpError); ok {
 			if sysErr, okErr := opErr.Err.(*os.SyscallError); okErr {
 				if sysErr.Err == syscall.ECONNREFUSED {
@@ -95,6 +99,7 @@ func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
 	// timeout occured
 	case <-ctx.Done():
 		s.changeNodeState(nodeHost, strconv.Itoa(nodeListenPort), STATUS_SUSPICIOUS)
+		s.logger.ReportInfo(fmt.Sprintf("%s is SUSPICIOUS"))
 		// TODO -> start a gossip cycle
 		go s.piggyBack(joined)
 		s.logger.ReportInfo("Sending Help Request to K Nodes")
@@ -113,7 +118,7 @@ func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
  */
 func (s *SWIMFailureDetector) piggyBack(targetInfo string) {
 	if len(s.nodesList.clusterMetadata) < s.kHelperNodes {
-		// TODO -> write error in the WAL
+		s.errLogger.ReportError(errors.New("Not enough K elements"))
 	} else {
 
 		var helperResponses []int = make([]int, 0)
@@ -150,13 +155,9 @@ func (s *SWIMFailureDetector) piggyBack(targetInfo string) {
 		// if every result are made of 0 then
 		// the target node must be considered removed
 		if eliminationCondition {
+			s.logger.ReportInfo(fmt.Sprintf("Removing %s - %s from the Membership List", host, port))
 			s.changeNodeState(host, port, STATUS_REMOVED)
 			s.nodesList.DeleteNodeFromCluster(host, port)
-		}
-
-		// only for testing
-		for _, v := range s.nodesList.clusterMetadata {
-			fmt.Printf("Node ID = %s %d Node Status: %d \n", v.nodeAddress, v.nodeListenPort, v.nodeStatus)
 		}
 	}
 }
@@ -210,9 +211,9 @@ func (s *SWIMFailureDetector) changeNodeState(nodeHost, nodePort string, nodeUpd
 // by the server
 func (s *SWIMFailureDetector) ClusterFailureDetection() {
 	s.logger.ReportInfo("SWIM Protocol On")
+	s.logger.ReportInfo("Failure Detection ON")
 	for {
 		time.Sleep(s.swimSchedule)
-		s.logger.ReportInfo("Failure Detection ON")
 
 		for _, node := range s.nodesList.clusterMetadata {
 			if node != nil {
