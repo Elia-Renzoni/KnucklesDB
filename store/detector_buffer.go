@@ -7,22 +7,24 @@ package store
 import (
 	"sync"
 	"time"
+	"knucklesdb/wal"
 )
 
 type DetectorBuffer struct {
 	buffer     map[string]*Victim
 	bufferSize int
 	wg         sync.WaitGroup
-	//commApi *api.API
 	bufferPool *BufferPool
+	logger *wal.InfoLogger
 }
 
-func NewDetectorBuffer(bPool *BufferPool, wg sync.WaitGroup) *DetectorBuffer {
+func NewDetectorBuffer(bPool *BufferPool, wg sync.WaitGroup, logger *wal.InfoLogger) *DetectorBuffer {
 	return &DetectorBuffer{
 		buffer:     make(map[string]*Victim),
 		bufferSize: 0,
 		wg: wg,
 		bufferPool: bPool,
+		logger: logger,
 	}
 }
 
@@ -44,6 +46,7 @@ func (d *DetectorBuffer) UpdateVictimEpoch(v *Victim) {
 }
 
 func (d *DetectorBuffer) ClockPageEviction() {
+	d.logger.ReportInfo("Clock Algorithm ON")
 	for {
 		time.Sleep(3 * time.Second)
 

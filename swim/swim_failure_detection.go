@@ -79,6 +79,7 @@ func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
 		if opErr, ok := err.(*net.OpError); ok {
 			if sysErr, okErr := opErr.Err.(*os.SyscallError); okErr {
 				if sysErr.Err == syscall.ECONNREFUSED {
+					s.logger.ReportInfo(fmt.Sprintf("%s - %s is SUSPICIOUS", nodeHost, strconv.Itoa(nodeListenPort)))
 					s.changeNodeState(nodeHost, strconv.Itoa(nodeListenPort), STATUS_SUSPICIOUS)
 					go s.piggyBack(joined)
 					s.logger.ReportInfo("Sending Help Request to K Nodes")
@@ -99,14 +100,13 @@ func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
 	// timeout occured
 	case <-ctx.Done():
 		s.changeNodeState(nodeHost, strconv.Itoa(nodeListenPort), STATUS_SUSPICIOUS)
-		s.logger.ReportInfo(fmt.Sprintf("%s is SUSPICIOUS"))
+		s.logger.ReportInfo(fmt.Sprintf("%s - %s is SUSPICIOUS", nodeHost, strconv.Itoa(nodeListenPort)))
 		// TODO -> start a gossip cycle
 		go s.piggyBack(joined)
 		s.logger.ReportInfo("Sending Help Request to K Nodes")
 	default:
 		count, _ := conn.Read(replyData)
 		json.Unmarshal(replyData[:count], &s.swimMessageAck)
-		fmt.Println(s.swimMessageAck)
 	}
 }
 
@@ -173,7 +173,7 @@ func (s *SWIMFailureDetector) pingPiggyBack() func(string, int, string) int {
 		conn, err := net.Dial("tcp", net.JoinHostPort(parentIP, castedPort))
 
 		if err != nil {
-			// TODO -> write error in the WAL.
+			s.errLogger.ReportError(err)
 			return 0
 		}
 		defer conn.Close()

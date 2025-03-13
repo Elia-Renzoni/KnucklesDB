@@ -117,7 +117,7 @@ func (w *WAL) ScanLines() {
 
 	close(w.RecoveryChannel)
 	
-	errRemove := os.Remove("server/wal.txt")
+	errRemove := os.Remove("wal.txt")
 	if errRemove != nil {
 		w.logger.ReportError(errRemove)
 	}

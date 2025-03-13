@@ -3,7 +3,6 @@ package node
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"knucklesdb/store"
 	"knucklesdb/swim"
 	"net"
@@ -210,7 +209,6 @@ func (r *Replica) handleJoinMembershipMessage(conn net.Conn, buffer []byte, buff
 
 	json.Unmarshal(buffer[:bufferLength], &r.protocolMessages.JoinRequest)
 	converted, err := strconv.Atoi(r.protocolMessages.JoinRequest.ListenPort)
-	fmt.Println(converted)
 	if err != nil {
 		bytes, _ := json.Marshal(map[string]any{
 			"error": "Malformed Listen Port",

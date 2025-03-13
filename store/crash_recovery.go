@@ -9,7 +9,6 @@ package store
 
 import (
 	"knucklesdb/wal"
-	"fmt"
 )
 
 type Recover struct {
@@ -60,7 +59,6 @@ func (r *Recover) StartRecovery(dbState *KnucklesMap) {
 			select {
 			case entryToRestore := <-r.walRecoveryChannel.RecoveryChannel:
 				if entryToRestore.IsSet() {
-					fmt.Println(string(entryToRestore.Key))
 					dbState.Set(entryToRestore.Key, entryToRestore.Value)
 				}
 			// the channel is closed.
@@ -68,6 +66,6 @@ func (r *Recover) StartRecovery(dbState *KnucklesMap) {
 				break
 			}
 		}
-		r.logger.ReportInfo("Recovery Sessione Ended")
 	}()
+	r.logger.ReportInfo("Recovery Session Ended")
 }

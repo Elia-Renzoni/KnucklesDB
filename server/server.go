@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"knucklesdb/server/node"
 	"knucklesdb/store"
 	"knucklesdb/swim"
@@ -36,7 +35,7 @@ func main() {
 	addressBind := store.NewAddressBinder()
 	hashAlgorithm := store.NewSpookyHash(1)
 
-	failureDetector := store.NewDetectorBuffer(bufferPool, wg)
+	failureDetector := store.NewDetectorBuffer(bufferPool, wg, infoLogger)
 	updateQueue := store.NewSingularUpdateQueue(failureDetector)
 	recover := store.NewRecover(queueUpdateLogger, walLogger, infoLogger)
 	storeMap := store.NewKnucklesMap(bufferPool, addressBind, hashAlgorithm, updateQueue, recover)
@@ -44,7 +43,6 @@ func main() {
 
 	// start recovery session if needed
 	if full := walLogger.IsWALFull(); full {
-		fmt.Printf("here")
 		recover.StartRecovery(storeMap)
 	}
 
