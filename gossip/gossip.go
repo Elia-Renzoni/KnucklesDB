@@ -5,6 +5,7 @@
 package gossip
 
 type GossipProtocol struct {
+	gossipUtils *GossipUtils
 }
 
 func NewGossipProtocol() *GossipProtocol {
@@ -12,9 +13,10 @@ func NewGossipProtocol() *GossipProtocol {
 }
 
 func (g *GossipProtocol) StartGossipRound() {
-
 }
 
-func (g *GossipProtocol) PushGossip() {
-
+func (g *GossipProtocol) SpreadMembershipList(fanout []string) {
+	for index := range fanout {
+		g.gossipUtils.Send(index)
+	}
 }

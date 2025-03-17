@@ -23,7 +23,7 @@ type Replica struct {
 	swimMarshaler    *swim.ProtocolMarshaer
 	clusterJoiner    *swim.ClusterManager
 	logger 			 *wal.ErrorsLogger
-	infoLogger *wal.InfoLogger
+	infoLogger 		 *wal.InfoLogger
 }
 
 type SwimProtocolMessages struct {
