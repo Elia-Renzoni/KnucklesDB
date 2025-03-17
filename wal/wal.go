@@ -117,7 +117,7 @@ func (w *WAL) ScanLines() {
 
 	close(w.RecoveryChannel)
 	
-	errTruncation := os.Truncate("wal.txt", 0)
+	errTruncation := os.Remove("wal.txt")
 	if errTruncation != nil {
 		w.logger.ReportError(errTruncation)
 	}
