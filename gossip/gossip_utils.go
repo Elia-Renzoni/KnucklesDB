@@ -42,6 +42,10 @@ func (g *GossipUtils) Send(nodeAddress string, gossipMessage any) {
 		g.errorLogger.ReportError(errors.New("Gossip Send Failed due to Context Timeout"))
 	default:
 		count, _ := conn.Read(data)
-		// Unmarshal Messages
+		// Unmarshal Ack Messages
 	}
+}
+
+func (g *GossipUtils) HandleUpdate() {
+
 }
