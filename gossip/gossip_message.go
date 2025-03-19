@@ -1,13 +1,9 @@
 package gossip
 
-type GossipMessage[T any] struct {
-    message T
+type MembershipList struct {
+    
 }
 
-func (g *GossipMessage[T]) EncodeJSON() {
-
-}
-
-func (g *GossipMessage[T]) DecodeJSON() {
+type StateUpdate struct {
 
 }

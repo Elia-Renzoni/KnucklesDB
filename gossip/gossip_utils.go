@@ -33,7 +33,7 @@ func (g *GossipUtils) Send(nodeAddress string, gossipMessage any) {
 	defer conn.Close()
 
 	// TODO
-	conn.Write()
+	conn.Write(gossipMessage)
 
 	data := make([]byte, 2024)
 
