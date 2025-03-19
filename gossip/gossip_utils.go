@@ -10,8 +10,8 @@ import (
 
 type GossipUtils struct {
 	gossipGlobalContext context.Context
-	timeoutTime time.Duration
-	errorLogger *wal.ErrorsLogger
+	timeoutTime 		time.Duration
+	errorLogger 		*wal.ErrorsLogger
 }
 
 func NewGossipUtils(logger *wal.ErrorsLogger) *GossipUtils {
