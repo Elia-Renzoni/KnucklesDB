@@ -41,7 +41,7 @@ func (g *GossipUtils) Send(nodeAddress string, gossipMessage any) {
 	case <-ctx.Done(): 
 		g.errorLogger.ReportError(errors.New("Gossip Send Failed due to Context Timeout"))
 	default:
-		count, _ conn.Read(data)
+		count, _ := conn.Read(data)
 		// Unmarshal Messages
 	}
 }
