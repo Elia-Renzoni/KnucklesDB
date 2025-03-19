@@ -22,15 +22,12 @@ func NewGossipProtocol(gossip *GossipUtils, interval time.Duration) *GossipProto
 	}
 }
 
-func (g *GossipProtocol) StartGossip() {
-	for {
-		g.waitTime()
-
-		// TODO
-		g.gossipUtils.Send()
-		
+func (g *GossipProtocol) StartGossipCycle(fanout []string, messageToSend GossipMessage[string]) {
+	for index := range fanout {
+		g.gossipUtils.Send(index)
 	}
 }
+
 
 func (g *GossipProtocol) SpreadMembershipList(fanout []string) {
 	for index := range fanout {
