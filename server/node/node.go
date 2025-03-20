@@ -207,7 +207,10 @@ func (r *Replica) HandlePiggyBackSWIMMessage(conn net.Conn, buffer []byte, buffe
 }
 
 func (r *Replica) HandleSWIMFailureDetectionMessage(conn net.Conn, buffer []byte, bufferLength int) {
-
+	// prendere il messaggio.
+	// ignorarlo se già ricevuto.
+	// merge del messaggio.
+	// avvio di un nuovo gossip cycle.
 }
 
 func (r *Replica) handleJoinMembershipMessage(conn net.Conn, buffer []byte, bufferLength int) {
