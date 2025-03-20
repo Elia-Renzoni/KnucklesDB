@@ -172,15 +172,19 @@ func (c *ClusterManager) SetFanout() (fanoutFactor int) {
 }
 
 func (c *ClusterManager) SetFanoutList() []string {
+	var fanoutNodeList []string = make([]string, 0)
+
 	for i := 0; i < c.SetFanout(); i++ {
 		selectedNode := rand.Intn(fanoutFactor + 1)
 		fanoutNodeList = append(fanoutNodeList, net.JoinHostPort(c.clusterMetadata[selectedNode].nodeAddress, c.clusterMetadata[selectedNode].nodeListenPort))
 		for nodeIndex := range fanoutNodeList {
-			for c.isRedundant(fanoutNodeList[nodeIndex], fanoutNodeList) {
-				// TODO -> eliminate the node in every occurency from the fanoutNodelist
+			if c.isRedundant(fanoutNodeList[nodeIndex], fanoutNodeList) {
+				fanoutNodeList = slices.Delete(fanoutNodeList, nodeIndex, nodeIndex + 1)
 			}
 		}
 	}
+
+	return fanoutNodeList
 }
 
 func (c *ClusterManager) isRedundant(nodeToSearch string, fanoutNodeList []string) bool {
