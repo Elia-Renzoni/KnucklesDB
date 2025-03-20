@@ -46,6 +46,6 @@ func (g *GossipUtils) Send(nodeAddress string, gossipMessage any) {
 	}
 }
 
-func (g *GossipUtils) HandleUpdate() {
+func (g *GossipUtils) HandleMembershipListUpdate() {
 
 }

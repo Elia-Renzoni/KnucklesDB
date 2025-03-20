@@ -108,22 +108,6 @@ func (c *ClusterManager) JoinCluster(address string, port int) {
 	}
 	c.clusterMetadata = append(c.clusterMetadata, n)
 
-	var (
-		fanoutFactor int 
-	    fanoutNodeList []string = make([]string, 0)
-	)
-
-	if len(c.clusterMetadata) == 1 {
-		fanoutFactor = 1
-	} else {
-		fanoutFactor = len(c.clusterMetadata) / 4
-	}
-
-	for i := 0; i < fanoutFactor; i++ {
-		selectedNode := rand.Intn(fanoutFactor + 1)
-		fanoutNodeList = append(fanoutNodeList, net.JoinHostPort(c.clusterMetadata[selectedNode].nodeAddress, c.clusterMetadata[selectedNode].nodeListenPort))
-		// TODO -> check if the selected node is already present.
-	}
 	c.gossipSpreader.SpreadMembershipList(fanoutNodeList, c.clusterMetadata)
 }
 
@@ -175,4 +159,42 @@ func (c *ClusterManager) IsSeed(address string, port int) (bool, error) {
 	}
 
 	return false, nil
+}
+
+func (c *ClusterManager) SetFanout() (fanoutFactor int) {
+	if len(c.clusterMetadata) == 1 {
+		fanoutFactor = 1
+	} else {
+		fanoutFactor = len(c.clusterMetadata) / 4
+	}
+
+	return
+}
+
+func (c *ClusterManager) SetFanoutList() []string {
+	for i := 0; i < c.SetFanout(); i++ {
+		selectedNode := rand.Intn(fanoutFactor + 1)
+		fanoutNodeList = append(fanoutNodeList, net.JoinHostPort(c.clusterMetadata[selectedNode].nodeAddress, c.clusterMetadata[selectedNode].nodeListenPort))
+		for nodeIndex := range fanoutNodeList {
+			for c.isRedundant(fanoutNodeList[nodeIndex], fanoutNodeList) {
+				// TODO -> eliminate the node in every occurency from the fanoutNodelist
+			}
+		}
+	}
+}
+
+func (c *ClusterManager) isRedundant(nodeToSearch string, fanoutNodeList []string) bool {
+	var redundancyCounter int
+
+	for _, node := range fanoutNodeList {
+		if node == nodeToSearch {
+			redundancyCounter += 1
+		}
+	}
+
+	if redundancyCounter >= 2 {
+		return true
+	}
+
+	return false
 }

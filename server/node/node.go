@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 	"knucklesdb/wal"
+	"knucklesdb/gossip"
 
 	id "github.com/google/uuid"
 )
@@ -24,6 +25,7 @@ type Replica struct {
 	clusterJoiner    *swim.ClusterManager
 	logger 			 *wal.ErrorsLogger
 	infoLogger 		 *wal.InfoLogger
+	gossipUtils 	 *gossip.GossipUtils
 }
 
 type SwimProtocolMessages struct {
@@ -40,7 +42,7 @@ type Message struct {
 
 func NewReplica(address string, port string, dbMap *store.KnucklesMap, timeout time.Duration,
 	marshaler *swim.ProtocolMarshaer, clusterData *swim.ClusterManager, errLogger *wal.ErrorsLogger,
-	infosLog *wal.InfoLogger) *Replica {
+	infosLog *wal.InfoLogger, disseminationUtils *gossip.GossipUtils) *Replica {
 	return &Replica{
 		replicaID:     id.New(),
 		address:       address,
@@ -51,6 +53,7 @@ func NewReplica(address string, port string, dbMap *store.KnucklesMap, timeout t
 		clusterJoiner: clusterData,
 		logger:        errLogger,
 		infoLogger: 	infosLog,
+		gossipUtils: disseminationUtils,
 	}
 }
 
@@ -93,12 +96,14 @@ func (r *Replica) serveRequest(conn net.Conn) {
 		r.logger.ReportError(err)
 	} else {
 		switch msg.MethodType {
-		case "swim", "ping", "piggyback":
+		case "swim", "ping", "piggyback", "swim-gossip":
 			r.handleSWIMProtocolConnection(conn, buffer, msg.MethodType, n)
 		case "set", "get":
 			go r.handleConnection(conn, msg)
 		case "join":
 			r.handleJoinMembershipMessage(conn, buffer, n)
+		case "gossip":
+			r.handleConsensusAgreementMessage(conn, buffer, n)
 		default:
 			toSend, _ := json.Marshal(map[string]string{
 				"error": "Illegal Method Type",
@@ -148,6 +153,8 @@ func (r *Replica) handleSWIMProtocolConnection(conn net.Conn, buffer []byte, met
 		r.HandlePingSWIMMessage(conn)
 	case "piggyback":
 		r.HandlePiggyBackSWIMMessage(conn, buffer, countBuffer)
+	case "swim-gossip":
+		r.HandleSWIMFailureDetectionMessage(conn, buffer, countBuffer)
 	}
 }
 
@@ -199,8 +206,7 @@ func (r *Replica) HandlePiggyBackSWIMMessage(conn net.Conn, buffer []byte, buffe
 	}
 }
 
-// TODO
-func (r *Replica) HandleSWIMFailureDetectionMessage(buffer []byte, bufferLength int) {
+func (r *Replica) HandleSWIMFailureDetectionMessage(conn net.Conn, buffer []byte, bufferLength int) {
 
 }
 
@@ -221,4 +227,8 @@ func (r *Replica) handleJoinMembershipMessage(conn net.Conn, buffer []byte, buff
 	}
 
 	conn.Close()
+}
+
+func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer []byte, messageBufferLength int) {
+
 }
