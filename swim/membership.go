@@ -108,6 +108,7 @@ func (c *ClusterManager) JoinCluster(address string, port int) {
 	}
 	c.clusterMetadata = append(c.clusterMetadata, n)
 
+	fanoutNodeList := c.SetFanoutList()
 	c.gossipSpreader.SpreadMembershipList(fanoutNodeList, c.clusterMetadata)
 }
 

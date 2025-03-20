@@ -10,11 +10,13 @@ import (
 
 type GossipProtocol struct {
 	gossipUtils *GossipUtils
+	marshaler *GossipMarshaler
 }
 
-func NewGossipProtocol(gossip *GossipUtils) *GossipProtocol {
+func NewGossipProtocol(gossip *GossipUtils, marshaler *GossipMarshaler) *GossipProtocol {
 	return &GossipProtocol{
 		gossipUtils: gossip,
+		marshaler: marshaler,
 	}
 }
 
@@ -25,9 +27,10 @@ func (g *GossipProtocol) StartGossipCycle(fanout []string, messageToSend GossipM
 }
 
 
-func (g *GossipProtocol) SpreadMembershipList(fanout []string) {
+func (g *GossipProtocol) SpreadMembershipList(fanout []string, clusterMembers []*Node) {
+	g.marshaler.MarshalMembershipList(clusterMembers)
 	for index := range fanout {
-		g.gossipUtils.Send(index)
+		g.gossipUtils.Send(index, clusterMembers)
 	}
 }
 
