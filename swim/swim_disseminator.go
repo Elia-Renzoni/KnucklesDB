@@ -3,12 +3,16 @@ package swim
 import (
 	"net"
 	"wal"
+	"context"
+	"time"
 )
 
 type Dissemination struct {
 	conn net.Conn
 	clusterNodes []MembershipEntry
 	logger *wal.InfoLogger
+	gossipGlobalContext context.Context 
+	timeoutTime time.Duration
 }
 
 type MembershipEntry struct {
@@ -17,8 +21,12 @@ type MembershipEntry struct {
 	NodeStatus int `json:"status"`
 }
 
-func NewDissemination() *Dissemination {
-	return &Dissemination{}
+func NewDissemination(timeoutTime time.Duration, logger *wal.InfoLogger) *Dissemination {
+	return &Dissemination{
+		logger: logger, 
+		gossipGlobalContext: context.Background(),
+		timeoutTime: timeoutTime,
+	}
 }
 
 func (d *Dissemination) SpreadMembershipList(membershipList []*Node, fanoutList []string) {
@@ -36,7 +44,7 @@ func (d *Dissemination) SpreadMembershipListUpdates() {
 }
 
 func (d *Dissemination) send(nodeAddress string, gossipMessage []byte) {
-	ctx, cancel := context.WithTimeout(g.gossipGlobalContext, g.timeoutTime)
+	ctx, cancel := context.WithTimeout(d.gossipGlobalContext, d.timeoutTime)
 	defer cancel()
 	conn, err := net.Dial("tcp", nodeAddress)
 	if err != nil {
