@@ -11,4 +11,5 @@ func NewGossipMarshaler() *GossipMarshaler {
 }
 
 func (g *GossipMarshaler) MarshalMembershipList(clusterMembers []*Node) ([]byte, error) {
+	
 }
