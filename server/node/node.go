@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"time"
 	"knucklesdb/wal"
-	"knucklesdb/gossip"
 
 	id "github.com/google/uuid"
 )
@@ -25,7 +24,7 @@ type Replica struct {
 	clusterJoiner    *swim.ClusterManager
 	logger 			 *wal.ErrorsLogger
 	infoLogger 		 *wal.InfoLogger
-	gossipUtils 	 *gossip.GossipUtils
+	swimGossip 	 	 *swim.Dissemination
 }
 
 type SwimProtocolMessages struct {
@@ -42,7 +41,7 @@ type Message struct {
 
 func NewReplica(address string, port string, dbMap *store.KnucklesMap, timeout time.Duration,
 	marshaler *swim.ProtocolMarshaer, clusterData *swim.ClusterManager, errLogger *wal.ErrorsLogger,
-	infosLog *wal.InfoLogger, disseminationUtils *gossip.GossipUtils) *Replica {
+	infosLog *wal.InfoLogger, dissemination *swim.Dissemination) *Replica {
 	return &Replica{
 		replicaID:     id.New(),
 		address:       address,
@@ -53,7 +52,7 @@ func NewReplica(address string, port string, dbMap *store.KnucklesMap, timeout t
 		clusterJoiner: clusterData,
 		logger:        errLogger,
 		infoLogger: 	infosLog,
-		gossipUtils: disseminationUtils,
+		swimGossip: dissemination,
 	}
 }
 
@@ -86,7 +85,7 @@ func (r *Replica) serveRequest(conn net.Conn) {
 	_, cancel := context.WithDeadline(ctx, time.Time{}.Add(10*time.Second))
 	defer cancel()
 
-	buffer = make([]byte, 2040)
+	buffer = make([]byte, 5040)
 	n, err := conn.Read(buffer)
 	if err != nil {
 		r.logger.ReportError(err)
@@ -154,7 +153,7 @@ func (r *Replica) handleSWIMProtocolConnection(conn net.Conn, buffer []byte, met
 	case "piggyback":
 		r.HandlePiggyBackSWIMMessage(conn, buffer, countBuffer)
 	case "swim-gossip":
-		r.HandleSWIMFailureDetectionMessage(conn, buffer, countBuffer)
+		r.HandleSWIMGossipMessage(conn, buffer, countBuffer)
 	}
 }
 
@@ -206,7 +205,7 @@ func (r *Replica) HandlePiggyBackSWIMMessage(conn net.Conn, buffer []byte, buffe
 	}
 }
 
-func (r *Replica) HandleSWIMFailureDetectionMessage(conn net.Conn, buffer []byte, bufferLength int) {
+func (r *Replica) HandleSWIMGossipMessage(conn net.Conn, buffer []byte, bufferLength int) {
 	// prendere il messaggio.
 	// ignorarlo se già ricevuto.
 	// merge del messaggio.

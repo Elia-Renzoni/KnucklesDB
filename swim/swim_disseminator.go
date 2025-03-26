@@ -15,6 +15,7 @@ type Dissemination struct {
 	gossipGlobalContext context.Context 
 	timeoutTime time.Duration
 	cluster *ClusterManager
+	marshaler *ProtocolMarshaer
 }
 
 type MembershipEntry struct {
@@ -23,13 +24,15 @@ type MembershipEntry struct {
 	NodeStatus int `json:"status"`
 }
 
-func NewDissemination(timeoutTime time.Duration, logger *wal.InfoLogger, errorLogger *wal.ErrorsLogger, cluster *ClusterManager) *Dissemination {
+func NewDissemination(timeoutTime time.Duration, logger *wal.InfoLogger, errorLogger *wal.ErrorsLogger, cluster *ClusterManager,
+	marshaler *ProtocolMarshaer) *Dissemination {
 	return &Dissemination{
 		logger: logger, 
 		errorLogger: errorLogger,
 		gossipGlobalContext: context.Background(),
 		timeoutTime: timeoutTime,
 		cluster: cluster,
+		marshaler: marshaler,
 	}
 }
 
@@ -102,7 +105,11 @@ func (d *Dissemination) getDifferencies(receivedClusterMembers []*Node) ([]*Node
 	return diffSlice, len(diffSlice)
 }
 
-func (d *Dissemination) SpreadMembershipListUpdates() {
+func (d *Dissemination) SpreadMembershipListUpdates(fanoutList []string, updateToSpread *Node) {
+	for index := range fanoutList {
+		encodedUpdate, _  := d.marshaler.MarshalSingleNodeUpdate(node.nodeAddress, node.nodeListenPort, node.nodeStatus)
+		d.send(fanoutList[index], encodedUpdate)
+	}
 }
 
 func (d *Dissemination) send(nodeAddress string, gossipMessage []byte) {
