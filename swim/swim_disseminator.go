@@ -2,7 +2,7 @@ package swim
 
 import (
 	"net"
-	"wal"
+	"knucklesdb/wal"
 	"context"
 	"time"
 )
@@ -11,8 +11,10 @@ type Dissemination struct {
 	conn net.Conn
 	clusterNodes []MembershipEntry
 	logger *wal.InfoLogger
+	errorLogger *wal.ErrorsLogger
 	gossipGlobalContext context.Context 
 	timeoutTime time.Duration
+	cluster *ClusterManager
 }
 
 type MembershipEntry struct {
@@ -21,11 +23,13 @@ type MembershipEntry struct {
 	NodeStatus int `json:"status"`
 }
 
-func NewDissemination(timeoutTime time.Duration, logger *wal.InfoLogger) *Dissemination {
+func NewDissemination(timeoutTime time.Duration, logger *wal.InfoLogger, errorLogger *wal.ErrorsLogger, cluster *ClusterManager) *Dissemination {
 	return &Dissemination{
 		logger: logger, 
+		errorLogger: errorLogger,
 		gossipGlobalContext: context.Background(),
 		timeoutTime: timeoutTime,
+		cluster: cluster,
 	}
 }
 
@@ -36,8 +40,66 @@ func (d *Dissemination) SpreadMembershipList(membershipList []*Node, fanoutList 
 	}
 }
 
-func (d *Dissemination) HandleGossipMessage() {
+func (d *Dissemination) IsMembershipListDifferent(receivedMembershipList []*Node) bool {
+	var (
+		different bool = true
+	)
 
+	for remoteNodeIndex := range receivedMembershipList {
+		for localNodeIndex := range d.cluster.clusterMetadata {
+			switch  {
+			case receivedMembershipList[remoteNodeIndex].nodeAddress != d.cluster.clusterMetadata[localNodeIndex].nodeAddress:
+				fallthrough
+			case receivedMembershipList[remoteNodeIndex].nodeListenPort != d.cluster.clusterMetadata[localNodeIndex].nodeListenPort:
+				fallthrough
+			case receivedMembershipList[remoteNodeIndex].nodeStatus != d.cluster.clusterMetadata[localNodeIndex].nodeStatus:
+				different = false
+			default:
+				different = true
+			}
+		}
+	} 
+
+	return different
+}
+
+func (d *Dissemination) MergeMembershipList(clusterMetadata []*Node) {
+	var differencies, length = d.getDifferencies(clusterMetadata)
+
+	if length != 0 {
+		for _, nodeToJoin := range differencies {
+			d.cluser.clusterMetadata = append(d.cluster.clusterMetadata, nodeToJoin)
+		}
+	} 
+}
+
+func (d *Dissemination) getDifferencies(receivedClusterMembers []*Node) ([]*Node, int) {
+	var (
+		diffSlice []*Node = make([]*Node, 0)
+		different bool
+	)
+
+	for _, receivedNode := range receivedClusterMembers {
+		for _, node := range d.cluster.clusterMetadata {
+			switch {
+			case receivedNode.nodeAddress == node.nodeAddress:
+				fallthrough
+			case receivedNode.nodeListenPort == node.nodeListenPort:
+				fallthrough
+			case receivedNode.nodeStatus == node.nodeStatus:
+				different = false
+			default:
+				different = true
+			}
+		} 
+
+		if different {
+			newNode := NewNode(receivedNode.nodeAddress, receivedNode.nodeListenPort, receivedNode.nodeStatus)
+			diffSlice = append(diffSlice, newNode)
+		}
+	}
+
+	return diffSlice, len(diffSlice)
 }
 
 func (d *Dissemination) SpreadMembershipListUpdates() {
@@ -48,7 +110,7 @@ func (d *Dissemination) send(nodeAddress string, gossipMessage []byte) {
 	defer cancel()
 	conn, err := net.Dial("tcp", nodeAddress)
 	if err != nil {
-		g.errorLogger.ReportError(err)
+		d.errorLogger.ReportError(err)
 		return
 	}
 	defer conn.Close()
@@ -59,7 +121,7 @@ func (d *Dissemination) send(nodeAddress string, gossipMessage []byte) {
 
 	select {
 	case <-ctx.Done(): 
-		g.errorLogger.ReportError(errors.New("Gossip Send Failed due to Context Timeout"))
+		d.errorLogger.ReportError(errors.New("Gossip Send Failed due to Context Timeout"))
 	default:
 		count, _ := conn.Read(data)
 		// Unmarshal Ack Messages
