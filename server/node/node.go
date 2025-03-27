@@ -95,7 +95,7 @@ func (r *Replica) serveRequest(conn net.Conn) {
 		r.logger.ReportError(err)
 	} else {
 		switch msg.MethodType {
-		case "swim", "ping", "piggyback", "swim-gossip":
+		case "swim", "ping", "piggyback", "membership", "swim-gossip":
 			r.handleSWIMProtocolConnection(conn, buffer, msg.MethodType, n)
 		case "set", "get":
 			go r.handleConnection(conn, msg)
@@ -152,7 +152,7 @@ func (r *Replica) handleSWIMProtocolConnection(conn net.Conn, buffer []byte, met
 		r.HandlePingSWIMMessage(conn)
 	case "piggyback":
 		r.HandlePiggyBackSWIMMessage(conn, buffer, countBuffer)
-	case "swim-gossip":
+	case "membership":
 		r.HandleSWIMGossipMessage(conn, buffer, countBuffer)
 	}
 }

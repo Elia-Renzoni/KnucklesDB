@@ -5,7 +5,10 @@ import (
 	"knucklesdb/wal"
 	"context"
 	"time"
+	"encoding/json"
 )
+
+const MAX_GOSSIP_ATTEMPS int = 3
 
 type Dissemination struct {
 	conn net.Conn
@@ -16,6 +19,8 @@ type Dissemination struct {
 	timeoutTime time.Duration
 	cluster *ClusterManager
 	marshaler *ProtocolMarshaer
+	ack       AckMessage
+	gossipQuorum int
 }
 
 type MembershipEntry struct {
@@ -33,6 +38,7 @@ func NewDissemination(timeoutTime time.Duration, logger *wal.InfoLogger, errorLo
 		timeoutTime: timeoutTime,
 		cluster: cluster,
 		marshaler: marshaler,
+		gossipQuorum: 0,
 	}
 }
 
@@ -106,9 +112,16 @@ func (d *Dissemination) getDifferencies(receivedClusterMembers []*Node) ([]*Node
 }
 
 func (d *Dissemination) SpreadMembershipListUpdates(fanoutList []string, updateToSpread *Node) {
-	for index := range fanoutList {
-		encodedUpdate, _  := d.marshaler.MarshalSingleNodeUpdate(node.nodeAddress, node.nodeListenPort, node.nodeStatus)
-		d.send(fanoutList[index], encodedUpdate)
+	for i := 0; i < MAX_GOSSIP_ATTEMPS; i++ {
+		for index := range fanoutList {
+			encodedUpdate, _  := d.marshaler.MarshalSingleNodeUpdate(node.nodeAddress, node.nodeListenPort, node.nodeStatus)
+			d.send(fanoutList[index], encodedUpdate)
+		}
+
+		// check if the majority quorum is reached.
+		if (d.gossipQuorum >= (len(fanoutList) / 2) + 1) {
+			break
+		}
 	}
 }
 
@@ -131,7 +144,10 @@ func (d *Dissemination) send(nodeAddress string, gossipMessage []byte) {
 		d.errorLogger.ReportError(errors.New("Gossip Send Failed due to Context Timeout"))
 	default:
 		count, _ := conn.Read(data)
-		// Unmarshal Ack Messages
+		json.Unmarshal(data[:count], &d.ack)
+		if d.ack == 1 {
+			d.gossipQuorum += 1
+		}
 	}
 }
 
