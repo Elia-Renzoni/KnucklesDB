@@ -21,6 +21,7 @@ type Dissemination struct {
 	marshaler *ProtocolMarshaer
 	ack       AckMessage
 	gossipQuorum int
+	gossipQuorumSpreadingList int 
 }
 
 type MembershipEntry struct {
@@ -43,9 +44,13 @@ func NewDissemination(timeoutTime time.Duration, logger *wal.InfoLogger, errorLo
 }
 
 func (d *Dissemination) SpreadMembershipList(membershipList []*Node, fanoutList []string) {
-	for index := range fanoutList {
-		encodeClusterMetadata, err := d.marshalMembershipList(membershipList)
-		d.send(fanoutList[index], encodeClusterMetadata)
+	for attemp := 0; attemp < MAX_GOSSIP_ATTEMPS; attemp++ {
+		for index := range fanoutList {
+			encodeClusterMetadata, err := d.marshalMembershipList(membershipList)
+			d.send(fanoutList[index], encodeClusterMetadata)
+		}
+
+		// TODO: Add quorum policies
 	}
 }
 
