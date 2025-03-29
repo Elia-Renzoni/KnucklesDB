@@ -11,6 +11,7 @@ import (
 )
 
 const MAX_GOSSIP_ATTEMPS int = 3
+const RUNE_MEMBERSHIP_LIST_SEPARATOR rune = ','
 
 const (
 	SPREAD_MEMBERSHIP int = iota * 1
@@ -19,7 +20,6 @@ const (
 
 type Dissemination struct {
 	conn                      net.Conn
-	clusterNodes              []MembershipEntry
 	logger                    *wal.InfoLogger
 	errorLogger               *wal.ErrorsLogger
 	gossipGlobalContext       context.Context
@@ -29,12 +29,6 @@ type Dissemination struct {
 	ack                       AckMessage
 	gossipQuorum              int
 	gossipQuorumSpreadingList int
-}
-
-type MembershipEntry struct {
-	NodeAddress    string `json:"address"`
-	NodeListenPort string `json:"port"`
-	NodeStatus     int    `json:"status"`
 }
 
 func NewDissemination(timeoutTime time.Duration, logger *wal.InfoLogger, errorLogger *wal.ErrorsLogger, cluster *ClusterManager,
@@ -66,6 +60,13 @@ func (d *Dissemination) SpreadMembershipList(membershipList []*Node, fanoutList 
 
 	// reset the qourum counter
 	d.gossipQuorumSpreadingList = 0
+}
+
+func (d *Dissemination) TransformMembershipList(list []byte) []*Node {
+	var (
+		clusterNodes []*Node = make([]*Node, 0)
+		node         MembershipEntry
+	)
 }
 
 func (d *Dissemination) IsMembershipListDifferent(receivedMembershipList []*Node) bool {
@@ -183,9 +184,15 @@ func (d *Dissemination) send(nodeAddress string, gossipMessage []byte, operation
 func (d *Dissemination) marshalMembershipList(clusterData []*Node) ([]byte, error) {
 	var (
 		encodedMembershipList bytes.Buffer
-		entry                 []byte
+		nodesObject           bytes.Buffer
+		entry, header, tail   []byte
 		err                   error
 	)
+
+	header, err = json.Marshal(map[string]string{
+		"type": "membership",
+	})
+	encodedMembershipList.Write(header)
 
 	for index := range clusterData {
 		entry, err = json.Marshal(map[string]any{
@@ -198,8 +205,15 @@ func (d *Dissemination) marshalMembershipList(clusterData []*Node) ([]byte, erro
 			return nil, err
 		}
 
-		encodedMembershipList.Write(entry)
+		nodesObject.Write(entry)
+		nodesObject.WriteRune(RUNE_MEMBERSHIP_LIST_SEPARATOR)
 	}
 
-	return encodedMembershipList.Bytes(), nil
+	tail, err = json.Marshal(map[string][]byte{
+		"list": nodesObject.Bytes(),
+	})
+
+	encodedMembershipList.Write(tail)
+
+	return encodedMembershipList.Bytes(), err
 }

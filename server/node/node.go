@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"knucklesdb/store"
 	"knucklesdb/swim"
+	"knucklesdb/wal"
 	"net"
 	"strconv"
 	"time"
-	"knucklesdb/wal"
 
 	id "github.com/google/uuid"
 )
@@ -22,15 +22,16 @@ type Replica struct {
 	timeoutTime      time.Duration
 	swimMarshaler    *swim.ProtocolMarshaer
 	clusterJoiner    *swim.ClusterManager
-	logger 			 *wal.ErrorsLogger
-	infoLogger 		 *wal.InfoLogger
-	swimGossip 	 	 *swim.Dissemination
+	logger           *wal.ErrorsLogger
+	infoLogger       *wal.InfoLogger
+	swimGossip       *swim.Dissemination
 }
 
 type SwimProtocolMessages struct {
 	PiggyBackMsg        swim.PiggyBackMessage
 	FailureDetectionMsg swim.DetectionMessage
 	JoinRequest         swim.JoinMessage
+	SpreadedList        swim.MembershipListMessage
 }
 
 type Message struct {
@@ -51,8 +52,8 @@ func NewReplica(address string, port string, dbMap *store.KnucklesMap, timeout t
 		swimMarshaler: marshaler,
 		clusterJoiner: clusterData,
 		logger:        errLogger,
-		infoLogger: 	infosLog,
-		swimGossip: dissemination,
+		infoLogger:    infosLog,
+		swimGossip:    dissemination,
 	}
 }
 
@@ -95,7 +96,7 @@ func (r *Replica) serveRequest(conn net.Conn) {
 		r.logger.ReportError(err)
 	} else {
 		switch msg.MethodType {
-		case "swim", "ping", "piggyback", "membership", "swim-gossip":
+		case "swim", "ping", "piggyback", "membership":
 			r.handleSWIMProtocolConnection(conn, buffer, msg.MethodType, n)
 		case "set", "get":
 			go r.handleConnection(conn, msg)
@@ -147,7 +148,7 @@ func (r *Replica) handleSWIMProtocolConnection(conn net.Conn, buffer []byte, met
 
 	switch methodType {
 	case "swim":
-		r.HandleSWIMFailureDetectionMessage(buffer, countBuffer)
+		r.HandleSWIMMembershipList(buffer, countBuffer)
 	case "ping":
 		r.HandlePingSWIMMessage(conn)
 	case "piggyback":
@@ -168,7 +169,7 @@ func (r *Replica) HandlePingSWIMMessage(conn net.Conn) {
 
 func (r *Replica) HandlePiggyBackSWIMMessage(conn net.Conn, buffer []byte, bufferLength int) {
 	r.infoLogger.ReportInfo("PiggyBack Message Arrived")
-	
+
 	if err := json.Unmarshal(buffer[:bufferLength], &r.protocolMessages.PiggyBackMsg); err != nil {
 		r.logger.ReportError(err)
 	}
@@ -182,7 +183,7 @@ func (r *Replica) HandlePiggyBackSWIMMessage(conn net.Conn, buffer []byte, buffe
 		r.logger.ReportError(err)
 		jsonValueNeg, _ := r.swimMarshaler.MarshalAckMessage(0)
 		conn.Write(jsonValueNeg)
-		return 
+		return
 	}
 	defer connHelper.Close()
 
@@ -210,6 +211,15 @@ func (r *Replica) HandleSWIMGossipMessage(conn net.Conn, buffer []byte, bufferLe
 	// ignorarlo se già ricevuto.
 	// merge del messaggio.
 	// avvio di un nuovo gossip cycle.
+}
+
+func (r *Replica) HandleSWIMMembershipList(buffer []byte, bufferLength int) {
+	if err := json.Unmarshal(buffer[:bufferLength], r.protocolMessages.SpreadedList); err != nil {
+		r.logger.ReportError(err)
+		return
+	}
+
+	// TODO => Prendere da buffer gli elementi e decodificarli creando una lista di []*swim.Node
 }
 
 func (r *Replica) handleJoinMembershipMessage(conn net.Conn, buffer []byte, bufferLength int) {

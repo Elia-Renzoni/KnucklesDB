@@ -32,3 +32,14 @@ type JoinMessage struct {
 	IPAddr     string `json:"ip"`
 	ListenPort string `json:"port"`
 }
+
+type MembershipListMessage struct {
+	MethodType string            `json:"type"`
+	List       []MembershipEntry `json:"list"`
+}
+
+type MembershipEntry struct {
+	NodeAddress    string `json:"address"`
+	NodeListenPort string `json:"port"`
+	NodeStatus     int    `json:"status"`
+}
