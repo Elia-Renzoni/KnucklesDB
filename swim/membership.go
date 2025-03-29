@@ -8,14 +8,14 @@ package swim
 import (
 	"context"
 	"encoding/json"
+	"knucklesdb/wal"
+	"math/rand"
 	"net"
 	"os"
-	"time"
-	"strconv"
-	"knucklesdb/wal"
-	"knucklesdb/gossip"
-	"math/rand"
 	"slices"
+	"strconv"
+	"time"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -24,8 +24,8 @@ type ClusterManager struct {
 	// that have joined the cluster.
 	clusterMetadata []*Node
 	marshaler       ProtocolMarshaer
-	logger         *wal.ErrorsLogger
-	gossipSpreader *gossip.GossipProtocol
+	logger          *wal.ErrorsLogger
+	gossipSpreader  *Dissemination
 }
 
 type SeedNodeMetadata struct {
@@ -33,11 +33,11 @@ type SeedNodeMetadata struct {
 	SeedNodeListenPort int    `yaml:"seed_listen_port"`
 }
 
-func NewClusterManager(logger *wal.ErrorsLogger, gossipProtocol *gossip.GossipProtocol) *ClusterManager {
+func NewClusterManager(logger *wal.ErrorsLogger, gossipProtocol *Dissemination) *ClusterManager {
 	return &ClusterManager{
 		clusterMetadata: make([]*Node, 0),
-		logger: logger,
-		gossipSpreader: gossipProtocol,
+		logger:          logger,
+		gossipSpreader:  gossipProtocol,
 	}
 }
 
@@ -102,21 +102,21 @@ func (c *ClusterManager) JoinCluster(address string, port int) {
 	// Idempotency is achieved through the loop above
 	for index, value := range c.clusterMetadata {
 		if value.nodeAddress == address && value.nodeListenPort == port {
-			c.clusterMetadata = slices.Delete(c.clusterMetadata, index, index + 1)
+			c.clusterMetadata = slices.Delete(c.clusterMetadata, index, index+1)
 			break
 		}
 	}
 	c.clusterMetadata = append(c.clusterMetadata, n)
 
 	fanoutNodeList := c.SetFanoutList()
-	c.gossipSpreader.SpreadMembershipList(fanoutNodeList, c.clusterMetadata)
+	c.gossipSpreader.SpreadMembershipList(c.clusterMetadata, fanoutNodeList)
 }
 
 func (c *ClusterManager) DeleteNodeFromCluster(address, port string) {
 	castedPort, _ := strconv.Atoi(port)
 	for index := range c.clusterMetadata {
 		if c.clusterMetadata[index].nodeAddress == address && c.clusterMetadata[index].nodeListenPort == castedPort {
-			c.clusterMetadata = slices.Delete(c.clusterMetadata, index, index + 1)
+			c.clusterMetadata = slices.Delete(c.clusterMetadata, index, index+1)
 			break
 		}
 	}
@@ -154,7 +154,6 @@ func (c *ClusterManager) IsSeed(address string, port int) (bool, error) {
 		return false, err
 	}
 
-
 	if seedNodeInfo.SeedNodeAddress == address && seedNodeInfo.SeedNodeListenPort == port {
 		return true, nil
 	}
@@ -176,11 +175,12 @@ func (c *ClusterManager) SetFanoutList() []string {
 	var fanoutNodeList []string = make([]string, 0)
 
 	for i := 0; i < c.SetFanout(); i++ {
-		selectedNode := rand.Intn(fanoutFactor + 1)
-		fanoutNodeList = append(fanoutNodeList, net.JoinHostPort(c.clusterMetadata[selectedNode].nodeAddress, c.clusterMetadata[selectedNode].nodeListenPort))
+		selectedNode := rand.Intn(c.SetFanout() + 1)
+		port := strconv.Itoa(c.clusterMetadata[selectedNode].nodeListenPort)
+		fanoutNodeList = append(fanoutNodeList, net.JoinHostPort(c.clusterMetadata[selectedNode].nodeAddress, port))
 		for nodeIndex := range fanoutNodeList {
 			if c.isRedundant(fanoutNodeList[nodeIndex], fanoutNodeList) {
-				fanoutNodeList = slices.Delete(fanoutNodeList, nodeIndex, nodeIndex + 1)
+				fanoutNodeList = slices.Delete(fanoutNodeList, nodeIndex, nodeIndex+1)
 			}
 		}
 	}

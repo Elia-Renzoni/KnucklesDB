@@ -1,45 +1,52 @@
 package swim
 
 import (
-	"net"
-	"knucklesdb/wal"
+	"bytes"
 	"context"
-	"time"
 	"encoding/json"
+	"errors"
+	"knucklesdb/wal"
+	"net"
+	"time"
 )
 
 const MAX_GOSSIP_ATTEMPS int = 3
 
+const (
+	SPREAD_MEMBERSHIP int = iota * 1
+	SPREAD_UPDATES
+)
+
 type Dissemination struct {
-	conn net.Conn
-	clusterNodes []MembershipEntry
-	logger *wal.InfoLogger
-	errorLogger *wal.ErrorsLogger
-	gossipGlobalContext context.Context 
-	timeoutTime time.Duration
-	cluster *ClusterManager
-	marshaler *ProtocolMarshaer
-	ack       AckMessage
-	gossipQuorum int
-	gossipQuorumSpreadingList int 
+	conn                      net.Conn
+	clusterNodes              []MembershipEntry
+	logger                    *wal.InfoLogger
+	errorLogger               *wal.ErrorsLogger
+	gossipGlobalContext       context.Context
+	timeoutTime               time.Duration
+	cluster                   *ClusterManager
+	marshaler                 *ProtocolMarshaer
+	ack                       AckMessage
+	gossipQuorum              int
+	gossipQuorumSpreadingList int
 }
 
 type MembershipEntry struct {
-	NodeAddress string `json:"address"`
+	NodeAddress    string `json:"address"`
 	NodeListenPort string `json:"port"`
-	NodeStatus int `json:"status"`
+	NodeStatus     int    `json:"status"`
 }
 
 func NewDissemination(timeoutTime time.Duration, logger *wal.InfoLogger, errorLogger *wal.ErrorsLogger, cluster *ClusterManager,
 	marshaler *ProtocolMarshaer) *Dissemination {
 	return &Dissemination{
-		logger: logger, 
-		errorLogger: errorLogger,
+		logger:              logger,
+		errorLogger:         errorLogger,
 		gossipGlobalContext: context.Background(),
-		timeoutTime: timeoutTime,
-		cluster: cluster,
-		marshaler: marshaler,
-		gossipQuorum: 0,
+		timeoutTime:         timeoutTime,
+		cluster:             cluster,
+		marshaler:           marshaler,
+		gossipQuorum:        0,
 	}
 }
 
@@ -47,11 +54,18 @@ func (d *Dissemination) SpreadMembershipList(membershipList []*Node, fanoutList 
 	for attemp := 0; attemp < MAX_GOSSIP_ATTEMPS; attemp++ {
 		for index := range fanoutList {
 			encodeClusterMetadata, err := d.marshalMembershipList(membershipList)
-			d.send(fanoutList[index], encodeClusterMetadata)
+			d.errorLogger.ReportError(err)
+			d.send(fanoutList[index], encodeClusterMetadata, SPREAD_MEMBERSHIP)
 		}
 
-		// TODO: Add quorum policies
+		// check if the majority quorum is reached.
+		if d.gossipQuorumSpreadingList >= (len(fanoutList)/2)+1 {
+			break
+		}
 	}
+
+	// reset the qourum counter
+	d.gossipQuorumSpreadingList = 0
 }
 
 func (d *Dissemination) IsMembershipListDifferent(receivedMembershipList []*Node) bool {
@@ -61,7 +75,7 @@ func (d *Dissemination) IsMembershipListDifferent(receivedMembershipList []*Node
 
 	for remoteNodeIndex := range receivedMembershipList {
 		for localNodeIndex := range d.cluster.clusterMetadata {
-			switch  {
+			switch {
 			case receivedMembershipList[remoteNodeIndex].nodeAddress != d.cluster.clusterMetadata[localNodeIndex].nodeAddress:
 				fallthrough
 			case receivedMembershipList[remoteNodeIndex].nodeListenPort != d.cluster.clusterMetadata[localNodeIndex].nodeListenPort:
@@ -72,7 +86,7 @@ func (d *Dissemination) IsMembershipListDifferent(receivedMembershipList []*Node
 				different = true
 			}
 		}
-	} 
+	}
 
 	return different
 }
@@ -82,9 +96,9 @@ func (d *Dissemination) MergeMembershipList(clusterMetadata []*Node) {
 
 	if length != 0 {
 		for _, nodeToJoin := range differencies {
-			d.cluser.clusterMetadata = append(d.cluster.clusterMetadata, nodeToJoin)
+			d.cluster.clusterMetadata = append(d.cluster.clusterMetadata, nodeToJoin)
 		}
-	} 
+	}
 }
 
 func (d *Dissemination) getDifferencies(receivedClusterMembers []*Node) ([]*Node, int) {
@@ -105,7 +119,7 @@ func (d *Dissemination) getDifferencies(receivedClusterMembers []*Node) ([]*Node
 			default:
 				different = true
 			}
-		} 
+		}
 
 		if different {
 			newNode := NewNode(receivedNode.nodeAddress, receivedNode.nodeListenPort, receivedNode.nodeStatus)
@@ -119,18 +133,21 @@ func (d *Dissemination) getDifferencies(receivedClusterMembers []*Node) ([]*Node
 func (d *Dissemination) SpreadMembershipListUpdates(fanoutList []string, updateToSpread *Node) {
 	for i := 0; i < MAX_GOSSIP_ATTEMPS; i++ {
 		for index := range fanoutList {
-			encodedUpdate, _  := d.marshaler.MarshalSingleNodeUpdate(node.nodeAddress, node.nodeListenPort, node.nodeStatus)
-			d.send(fanoutList[index], encodedUpdate)
+			encodedUpdate, _ := d.marshaler.MarshalSingleNodeUpdate(updateToSpread.nodeAddress, updateToSpread.nodeListenPort, updateToSpread.nodeStatus)
+			d.send(fanoutList[index], encodedUpdate, SPREAD_UPDATES)
 		}
 
 		// check if the majority quorum is reached.
-		if (d.gossipQuorum >= (len(fanoutList) / 2) + 1) {
+		if d.gossipQuorum >= (len(fanoutList)/2)+1 {
 			break
 		}
 	}
+
+	// reset the quorum counter
+	d.gossipQuorum = 0
 }
 
-func (d *Dissemination) send(nodeAddress string, gossipMessage []byte) {
+func (d *Dissemination) send(nodeAddress string, gossipMessage []byte, operation int) {
 	ctx, cancel := context.WithTimeout(d.gossipGlobalContext, d.timeoutTime)
 	defer cancel()
 	conn, err := net.Dial("tcp", nodeAddress)
@@ -145,13 +162,20 @@ func (d *Dissemination) send(nodeAddress string, gossipMessage []byte) {
 	data := make([]byte, 2024)
 
 	select {
-	case <-ctx.Done(): 
+	case <-ctx.Done():
 		d.errorLogger.ReportError(errors.New("Gossip Send Failed due to Context Timeout"))
 	default:
 		count, _ := conn.Read(data)
 		json.Unmarshal(data[:count], &d.ack)
-		if d.ack == 1 {
-			d.gossipQuorum += 1
+		switch operation {
+		case SPREAD_MEMBERSHIP:
+			if d.ack.AckContent == 1 {
+				d.gossipQuorumSpreadingList += 1
+			}
+		case SPREAD_UPDATES:
+			if d.ack.AckContent == 1 {
+				d.gossipQuorum += 1
+			}
 		}
 	}
 }
@@ -159,15 +183,15 @@ func (d *Dissemination) send(nodeAddress string, gossipMessage []byte) {
 func (d *Dissemination) marshalMembershipList(clusterData []*Node) ([]byte, error) {
 	var (
 		encodedMembershipList bytes.Buffer
-		entry []byte
-		err error
+		entry                 []byte
+		err                   error
 	)
 
 	for index := range clusterData {
 		entry, err = json.Marshal(map[string]any{
 			"address": clusterData[index].nodeAddress,
-			"port": clusterData[index].listenPort,
-			"status": clusterData[index].nodeStatus,
+			"port":    clusterData[index].nodeListenPort,
+			"status":  clusterData[index].nodeStatus,
 		})
 
 		if err != nil {
