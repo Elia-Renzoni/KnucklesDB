@@ -62,11 +62,18 @@ func (d *Dissemination) SpreadMembershipList(membershipList []*Node, fanoutList 
 	d.gossipQuorumSpreadingList = 0
 }
 
-func (d *Dissemination) TransformMembershipList(list []byte) []*Node {
+func (d *Dissemination) TransformMembershipList(cluster MembershipListMessage) []*Node {
 	var (
 		clusterNodes []*Node = make([]*Node, 0)
 		node         MembershipEntry
 	)
+
+	for _, node := range cluster.List {
+		convertedNode := NewNode(node.NodeAddress, node.NodeListenPort, node.NodeStatus)
+		clusterNodes = append(clusterNodes, convertedNode)
+	}
+
+	return clusterNodes
 }
 
 func (d *Dissemination) IsMembershipListDifferent(receivedMembershipList []*Node) bool {

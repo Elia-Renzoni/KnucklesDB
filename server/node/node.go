@@ -219,7 +219,12 @@ func (r *Replica) HandleSWIMMembershipList(buffer []byte, bufferLength int) {
 		return
 	}
 
-	// TODO => Prendere da buffer gli elementi e decodificarli creando una lista di []*swim.Node
+	decodedMembershipList := r.swimGossip.TransformMembershipList(r.protocolMessages.SpreadedList)
+	if isDifferent := r.swimGossip.IsMembershipListDifferent(decodedMembershipList); isDifferent {
+		r.swimGossip.MergeMembershipList(decodedMembershipList)
+		fanoutList := r.clusterJoiner.SetFanoutList()
+		go r.swimGossip.SpreadMembershipList(decodedMembershipList, fanoutList)
+	}
 }
 
 func (r *Replica) handleJoinMembershipMessage(conn net.Conn, buffer []byte, bufferLength int) {
