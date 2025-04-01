@@ -99,12 +99,41 @@ func (d *Dissemination) IsMembershipListDifferent(receivedMembershipList []*Node
 	return different
 }
 
+func (d *Dissemination) IsUpdateDifferent(update *Node) bool {
+	var (
+		different bool = false
+	)
+
+	for _, node := d.cluster.clusterMetadata {
+		if node.nodeAddress == update.nodeAddress {
+			if node.nodeListenPort == update.nodeListenPort {
+				if node.nodeStatus != update.nodeStatus {
+					different = true
+				}
+			}
+		}
+	}
+	
+	return different
+}
+
 func (d *Dissemination) MergeMembershipList(clusterMetadata []*Node) {
 	var differencies, length = d.getDifferencies(clusterMetadata)
 
 	if length != 0 {
 		for _, nodeToJoin := range differencies {
 			d.cluster.clusterMetadata = append(d.cluster.clusterMetadata, nodeToJoin)
+		}
+	}
+}
+
+func (d *Dissemination) MergeUpdates(update *Node) {
+	for _, node := range d.cluster.clusterMetadata {
+		switch {
+		case node.nodeAddress == update.nodeAddress:
+			fallthrough
+		case node.nodeListenPort == update.nodeListenPort:
+			node.nodeStatus = update.nodeStatus
 		}
 	}
 }

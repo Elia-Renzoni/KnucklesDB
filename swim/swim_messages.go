@@ -43,3 +43,10 @@ type MembershipEntry struct {
 	NodeListenPort string `json:"port"`
 	NodeStatus     int    `json:"status"`
 }
+
+type SWIMUpdateMessage struct {
+	MethodType     string `json:"type"`
+	NodeAddress    string `json:"address"`
+	NodeListenPort string `json:"port"`
+	NodeStatus     int `json:"change"`
+}

@@ -89,14 +89,14 @@ func (p *ProtocolMarshaer) MarshalJoinMessage(host, port string) ([]byte, error)
 	return encodedJoinMessage, err
 }
 
-func (p *ProtocolMarshaer) MarshalSingleNodeUpdate(host string, port int, status int) ([]byte, error) {
+func (p *ProtocolMarshaer) MarshalSingleNodeUpdate(host string, port, status int) ([]byte, error) {
 	var (
 		encodedUpdateToSpread []byte
 		err                   error
 	)
 
 	encodedUpdateToSpread, err = json.Marshal(map[string]any{
-		"type":   "swim-gossip",
+		"type":   "node-update",
 		"swim":   status,
 		"nodeID": host,
 		"port":   port,
