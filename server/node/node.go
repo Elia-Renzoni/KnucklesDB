@@ -148,7 +148,7 @@ func (r *Replica) handleSWIMProtocolConnection(conn net.Conn, buffer []byte, met
 
 	switch methodType {
 	case "swim":
-		r.HandleSWIMMembershipList(buffer, countBuffer)
+		r.HandleSWIMMembershipList(conn, buffer, countBuffer)
 	case "ping":
 		r.HandlePingSWIMMessage(conn)
 	case "piggyback":
@@ -213,7 +213,7 @@ func (r *Replica) HandleSWIMGossipMessage(conn net.Conn, buffer []byte, bufferLe
 	// avvio di un nuovo gossip cycle.
 }
 
-func (r *Replica) HandleSWIMMembershipList(buffer []byte, bufferLength int) {
+func (r *Replica) HandleSWIMMembershipList(conn net.Conn, buffer []byte, bufferLength int) {
 	if err := json.Unmarshal(buffer[:bufferLength], r.protocolMessages.SpreadedList); err != nil {
 		r.logger.ReportError(err)
 		return
@@ -224,6 +224,12 @@ func (r *Replica) HandleSWIMMembershipList(buffer []byte, bufferLength int) {
 		r.swimGossip.MergeMembershipList(decodedMembershipList)
 		fanoutList := r.clusterJoiner.SetFanoutList()
 		go r.swimGossip.SpreadMembershipList(decodedMembershipList, fanoutList)
+
+		jsonAck, _ := r.swimMarshaler.MarshalPing(1)
+		conn.Write(jsonAck)
+	} else {
+		jsonAck, _ := r.swimMarshaler.MarshalPing(0)
+		conn.Write(jsonAck)
 	}
 }
 

@@ -177,11 +177,13 @@ func (d *Dissemination) send(nodeAddress string, gossipMessage []byte, operation
 		json.Unmarshal(data[:count], &d.ack)
 		switch operation {
 		case SPREAD_MEMBERSHIP:
-			if d.ack.AckContent == 1 {
+			switch d.ack.AckContent {
+			case 1, 0:
 				d.gossipQuorumSpreadingList += 1
 			}
 		case SPREAD_UPDATES:
-			if d.ack.AckContent == 1 {
+			switch d.ack.AckContent {
+			case 1, 0:
 				d.gossipQuorum += 1
 			}
 		}
