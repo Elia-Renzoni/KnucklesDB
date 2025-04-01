@@ -96,10 +96,10 @@ func (p *ProtocolMarshaer) MarshalSingleNodeUpdate(host string, port, status int
 	)
 
 	encodedUpdateToSpread, err = json.Marshal(map[string]any{
-		"type":   "node-update",
-		"swim":   status,
-		"nodeID": host,
-		"port":   port,
+		"type": "swim-update",
+		"node": host,
+		"port": port,
+		"changed": status,
 	})
 
 	return encodedUpdateToSpread, err

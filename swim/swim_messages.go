@@ -39,14 +39,14 @@ type MembershipListMessage struct {
 }
 
 type MembershipEntry struct {
-	NodeAddress    string `json:"address"`
+	NodeAddress    string `json:"node"`
 	NodeListenPort string `json:"port"`
 	NodeStatus     int    `json:"status"`
 }
 
 type SWIMUpdateMessage struct {
 	MethodType     string `json:"type"`
-	NodeAddress    string `json:"address"`
-	NodeListenPort string `json:"port"`
-	NodeStatus     int `json:"change"`
+	NodeAddress    string `json:"node"`
+	NodeListenPort int `json:"port"`
+	NodeStatus     int `json:"changed"`
 }

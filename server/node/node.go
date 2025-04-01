@@ -32,6 +32,7 @@ type SwimProtocolMessages struct {
 	FailureDetectionMsg swim.DetectionMessage
 	JoinRequest         swim.JoinMessage
 	SpreadedList        swim.MembershipListMessage
+	NodeUpdate          swim.SWIMUpdateMessage
 }
 
 type Message struct {
@@ -147,13 +148,13 @@ func (r *Replica) handleSWIMProtocolConnection(conn net.Conn, buffer []byte, met
 	defer conn.Close()
 
 	switch methodType {
-	case "swim":
+	case "membership":
 		r.HandleSWIMMembershipList(conn, buffer, countBuffer)
 	case "ping":
 		r.HandlePingSWIMMessage(conn)
 	case "piggyback":
 		r.HandlePiggyBackSWIMMessage(conn, buffer, countBuffer)
-	case "membership":
+	case "swim-update":
 		r.HandleSWIMGossipMessage(conn, buffer, countBuffer)
 	}
 }
@@ -207,14 +208,27 @@ func (r *Replica) HandlePiggyBackSWIMMessage(conn net.Conn, buffer []byte, buffe
 }
 
 func (r *Replica) HandleSWIMGossipMessage(conn net.Conn, buffer []byte, bufferLength int) {
-	// prendere il messaggio.
-	// ignorarlo se già ricevuto.
-	// merge del messaggio.
-	// avvio di un nuovo gossip cycle.
+	if err := json.Unmarshal(buffer[:bufferLength], &r.protocolMessages.NodeUpdate); err != nil {
+		r.logger.ReportError(err)
+		return
+	}
+
+	node := swim.NewNode(r.protocolMessages.NodeUpdate.NodeAddress, r.protocolMessages.NodeUpdate.NodeListenPort, r.protocolMessages.NodeUpdate.NodeStatus)
+	if different := r.swimGossip.IsUpdateDifferent(node); different {
+		r.swimGossip.MergeUpdates(node)
+		fanoutList := r.clusterJoiner.SetFanoutList()
+		go r.swimGossip.SpreadMembershipListUpdates(fanoutList, node)
+
+		jsonAck, _ := r.swimMarshaler.MarshalPing(1)
+		conn.Write(jsonAck)
+	} else {
+		jsonAck, _  := r.swimMarshaler.MarshalPing(0)
+		conn.Write(jsonAck)
+	}
 }
 
 func (r *Replica) HandleSWIMMembershipList(conn net.Conn, buffer []byte, bufferLength int) {
-	if err := json.Unmarshal(buffer[:bufferLength], r.protocolMessages.SpreadedList); err != nil {
+	if err := json.Unmarshal(buffer[:bufferLength], &r.protocolMessages.SpreadedList); err != nil {
 		r.logger.ReportError(err)
 		return
 	}
