@@ -2,7 +2,6 @@ package consensus
 
 import (
 	"knucklesdb/wal"
-	"knucklesdb/gossip"
 	"knucklesdb/swim"
 	"time"
 )
