@@ -43,19 +43,23 @@ type SWIMFailureDetector struct {
 	// timeout time
 	timeoutTime time.Duration
 
+	gossip *Dissemination
+
 	logger *wal.InfoLogger
 
 	errLogger *wal.ErrorsLogger
 }
 
 func NewSWIMFailureDetector(nodes *ClusterManager, marshaler *ProtocolMarshaer, helperNodes int,
-	sleepTime, timeoutBoundaries time.Duration, logger *wal.InfoLogger, errLog *wal.ErrorsLogger) *SWIMFailureDetector {
+	sleepTime, timeoutBoundaries time.Duration, logger *wal.InfoLogger, errLog *wal.ErrorsLogger,
+	gossip *Dissemination) *SWIMFailureDetector {
 	return &SWIMFailureDetector{
 		nodesList:    nodes,
 		marshaler:    marshaler,
 		kHelperNodes: helperNodes,
 		swimSchedule: sleepTime,
 		timeoutTime:  timeoutBoundaries,
+		gossip: gossip,
 		logger: logger,
 		errLogger: errLog,
 	}
@@ -100,6 +104,10 @@ func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
 	// timeout occured
 	case <-ctx.Done():
 		s.changeNodeState(nodeHost, strconv.Itoa(nodeListenPort), STATUS_SUSPICIOUS)
+
+		// spread update in the cluster.
+		go s.gossip.SpreadMembershipListUpdates(s.nodeList.SetFanoutList(), NewNode(nodeHost, strconv.Itoa(nodeListenPort), STATUS_SUSPICIOUS))
+
 		s.logger.ReportInfo(fmt.Sprintf("%s - %s is SUSPICIOUS", nodeHost, strconv.Itoa(nodeListenPort)))
 		// TODO -> start a gossip cycle
 		go s.piggyBack(joined)
@@ -158,6 +166,9 @@ func (s *SWIMFailureDetector) piggyBack(targetInfo string) {
 			s.logger.ReportInfo(fmt.Sprintf("Removing %s - %s from the Membership List", host, port))
 			s.changeNodeState(host, port, STATUS_REMOVED)
 			s.nodesList.DeleteNodeFromCluster(host, port)
+			
+			// spread the update
+			go s.gossip.SpreadMembershipListUpdates(s.nodeList.SetFanoutList(), NewNode(host, port, STATUS_REMOVED))
 		}
 	}
 }
