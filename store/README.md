@@ -41,3 +41,5 @@ To call the hash function, you can use the Hash32 method contained in the Spooky
 The KnucklesMap class contains the Write and Read methods, which the server must call to handle client requests. These methods, in turn, will call the methods contained in the SpookyHash, BufferPool, and AddressBinder classes. <br> <br>
 * Set() -> WritePage() -> AddPage().
 * Get() -> ReadPage() -> ReadValueFromBucket().
+### Concurrency Control
+KnucklesDB implements a concurrent hash table as a primary in-memory storage mechanism.
