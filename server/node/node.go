@@ -219,10 +219,10 @@ func (r *Replica) HandleSWIMGossipMessage(conn net.Conn, buffer []byte, bufferLe
 		fanoutList := r.clusterJoiner.SetFanoutList()
 		go r.swimGossip.SpreadMembershipListUpdates(fanoutList, node)
 
-		jsonAck, _ := r.swimMarshaler.MarshalPing(1)
+		jsonAck, _ := r.swimMarshaler.MarshalAckMessage(1)
 		conn.Write(jsonAck)
 	} else {
-		jsonAck, _  := r.swimMarshaler.MarshalPing(0)
+		jsonAck, _ := r.swimMarshaler.MarshalAckMessage(0)
 		conn.Write(jsonAck)
 	}
 }
@@ -239,10 +239,10 @@ func (r *Replica) HandleSWIMMembershipList(conn net.Conn, buffer []byte, bufferL
 		fanoutList := r.clusterJoiner.SetFanoutList()
 		go r.swimGossip.SpreadMembershipList(decodedMembershipList, fanoutList)
 
-		jsonAck, _ := r.swimMarshaler.MarshalPing(1)
+		jsonAck, _ := r.swimMarshaler.MarshalAckMessage(1)
 		conn.Write(jsonAck)
 	} else {
-		jsonAck, _ := r.swimMarshaler.MarshalPing(0)
+		jsonAck, _ := r.swimMarshaler.MarshalAckMessage(0)
 		conn.Write(jsonAck)
 	}
 }

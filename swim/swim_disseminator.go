@@ -24,14 +24,14 @@ type Dissemination struct {
 	errorLogger               *wal.ErrorsLogger
 	gossipGlobalContext       context.Context
 	timeoutTime               time.Duration
-	cluster                   *ClusterManager
+	cluster                   *Cluster
 	marshaler                 *ProtocolMarshaer
 	ack                       AckMessage
 	gossipQuorum              int
 	gossipQuorumSpreadingList int
 }
 
-func NewDissemination(timeoutTime time.Duration, logger *wal.InfoLogger, errorLogger *wal.ErrorsLogger, cluster *ClusterManager,
+func NewDissemination(timeoutTime time.Duration, logger *wal.InfoLogger, errorLogger *wal.ErrorsLogger, cluster *Cluster,
 	marshaler *ProtocolMarshaer) *Dissemination {
 	return &Dissemination{
 		logger:              logger,

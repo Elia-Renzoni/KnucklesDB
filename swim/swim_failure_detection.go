@@ -13,21 +13,23 @@ package swim
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"knucklesdb/wal"
 	"math/rand"
 	"net"
-	"time"
-	"fmt"
+	"os"
 	"strconv"
 	"syscall"
-	"os"
-	"errors"
-	"knucklesdb/wal"
+	"time"
 )
 
 type SWIMFailureDetector struct {
 
 	// used for the cluster metadata list
-	nodesList *ClusterManager
+	manager *ClusterManager
+
+	nodesList *Cluster
 
 	// message marshaler
 	marshaler      *ProtocolMarshaer
@@ -50,18 +52,19 @@ type SWIMFailureDetector struct {
 	errLogger *wal.ErrorsLogger
 }
 
-func NewSWIMFailureDetector(nodes *ClusterManager, marshaler *ProtocolMarshaer, helperNodes int,
+func NewSWIMFailureDetector(manager *ClusterManager, cluster *Cluster, marshaler *ProtocolMarshaer, helperNodes int,
 	sleepTime, timeoutBoundaries time.Duration, logger *wal.InfoLogger, errLog *wal.ErrorsLogger,
 	gossip *Dissemination) *SWIMFailureDetector {
 	return &SWIMFailureDetector{
-		nodesList:    nodes,
+		manager:      manager,
+		nodesList:    cluster,
 		marshaler:    marshaler,
 		kHelperNodes: helperNodes,
 		swimSchedule: sleepTime,
 		timeoutTime:  timeoutBoundaries,
-		gossip: gossip,
-		logger: logger,
-		errLogger: errLog,
+		gossip:       gossip,
+		logger:       logger,
+		errLogger:    errLog,
 	}
 }
 
@@ -106,7 +109,7 @@ func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
 		s.changeNodeState(nodeHost, strconv.Itoa(nodeListenPort), STATUS_SUSPICIOUS)
 
 		// spread update in the cluster.
-		go s.gossip.SpreadMembershipListUpdates(s.nodeList.SetFanoutList(), NewNode(nodeHost, strconv.Itoa(nodeListenPort), STATUS_SUSPICIOUS))
+		go s.gossip.SpreadMembershipListUpdates(s.manager.SetFanoutList(), NewNode(nodeHost, nodeListenPort, STATUS_SUSPICIOUS))
 
 		s.logger.ReportInfo(fmt.Sprintf("%s - %s is SUSPICIOUS", nodeHost, strconv.Itoa(nodeListenPort)))
 		// TODO -> start a gossip cycle
@@ -165,10 +168,12 @@ func (s *SWIMFailureDetector) piggyBack(targetInfo string) {
 		if eliminationCondition {
 			s.logger.ReportInfo(fmt.Sprintf("Removing %s - %s from the Membership List", host, port))
 			s.changeNodeState(host, port, STATUS_REMOVED)
-			s.nodesList.DeleteNodeFromCluster(host, port)
-			
+			s.manager.DeleteNodeFromCluster(host, port)
+
+			newPort, _ := strconv.Atoi(port)
+
 			// spread the update
-			go s.gossip.SpreadMembershipListUpdates(s.nodeList.SetFanoutList(), NewNode(host, port, STATUS_REMOVED))
+			go s.gossip.SpreadMembershipListUpdates(s.manager.SetFanoutList(), NewNode(host, newPort, STATUS_REMOVED))
 		}
 	}
 }
@@ -232,7 +237,7 @@ func (s *SWIMFailureDetector) ClusterFailureDetection() {
 					s.sendPing(node.nodeAddress, node.nodeListenPort)
 				}
 			}
-			
+
 		}
 	}
 }

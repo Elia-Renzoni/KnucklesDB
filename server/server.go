@@ -17,6 +17,7 @@ func main() {
 	timeoutDuration := 7 * time.Second
 	kHelperNodes := 2
 	routineSchedulingTime := 7 * time.Second
+
 	var wg sync.WaitGroup
 
 	flag.Parse()
@@ -27,9 +28,13 @@ func main() {
 	walLogger := wal.NewWAL(errorsLogger)
 	queueUpdateLogger := wal.NewLockFreeQueue(walLogger, infoLogger)
 
-	joiner := swim.NewClusterManager(errorsLogger)
+	cluster := swim.NewCluster()
 	marshaler := swim.NewProtocolMarshaler()
-	swimFailureDetector := swim.NewSWIMFailureDetector(joiner, marshaler, kHelperNodes, routineSchedulingTime, timeoutDuration, infoLogger, errorsLogger)
+
+	spreader := swim.NewDissemination(timeoutDuration, infoLogger, errorsLogger, cluster, marshaler)
+	joiner := swim.NewClusterManager(cluster, errorsLogger, spreader)
+
+	swimFailureDetector := swim.NewSWIMFailureDetector(joiner, cluster, marshaler, kHelperNodes, routineSchedulingTime, timeoutDuration, infoLogger, errorsLogger, spreader)
 
 	bufferPool := store.NewBufferPool()
 	addressBind := store.NewAddressBinder()
@@ -39,7 +44,7 @@ func main() {
 	updateQueue := store.NewSingularUpdateQueue(failureDetector)
 	recover := store.NewRecover(queueUpdateLogger, walLogger, infoLogger)
 	storeMap := store.NewKnucklesMap(bufferPool, addressBind, hashAlgorithm, updateQueue, recover)
-	replica := node.NewReplica(*host, *port, storeMap, timeoutDuration, marshaler, joiner, errorsLogger, infoLogger)
+	replica := node.NewReplica(*host, *port, storeMap, timeoutDuration, marshaler, joiner, errorsLogger, infoLogger, spreader)
 
 	// start recovery session if needed
 	if full := walLogger.IsWALFull(); full {
