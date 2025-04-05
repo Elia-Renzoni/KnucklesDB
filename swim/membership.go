@@ -42,7 +42,7 @@ func NewClusterManager(logger *wal.ErrorsLogger, gossipProtocol *Dissemination) 
 }
 
 /*
-*	@brief ...
+*	@brief Method Called by the new nodes to enter the cluster
 *	@param IP address.
 *	@param listen port.
 **/
