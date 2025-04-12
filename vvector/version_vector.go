@@ -9,8 +9,8 @@ type VersionVector struct {
 	dataVersion int64
 }
 
-func NewVersionVector(node id.UUID) *VersionVector {
-	return &VersionVector{
+func NewVersionVector(node id.UUID) VersionVector {
+	return VersionVector{
 		nodeID:      node,
 		dataVersion: 0,
 	}
