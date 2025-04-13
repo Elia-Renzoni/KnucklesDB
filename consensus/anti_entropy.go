@@ -8,12 +8,12 @@ import (
 
 type AntiEntropy struct {
 	gossipProtocol *Gossip
-	membershipList *swim.ClusterManager
+	membershipList *swim.Cluster
 	infoLogger     *wal.InfoLogger
 	sleepTime      func(time.Duration)
 }
 
-func NewAntiEntropy(gProtocol *Gossip, clusterList *swim.ClusterManager, logger *wal.InfoLogger) *AntiEntropy {
+func NewAntiEntropy(gProtocol *Gossip, clusterList *swim.Cluster, logger *wal.InfoLogger) *AntiEntropy {
 	return &AntiEntropy{
 		gossipProtocol: gProtocol,
 		membershipList: clusterList,
