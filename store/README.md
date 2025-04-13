@@ -7,6 +7,9 @@ The buffer pool consists of the following modules:
 * Buffer Pool
 * Hash Function
 * Storage API
+* Concurrency Control
+* Pagination Algorithm
+* Recovery Algorithm
 ### Address Binder
 This module is responsible for translating hash functions into indexes, so you can map the entries in the array of pages contained in the buffer pool <br>
 ```Go
@@ -43,3 +46,11 @@ The KnucklesMap class contains the Write and Read methods, which the server must
 * Get() -> ReadPage() -> ReadValueFromBucket().
 ### Concurrency Control
 KnucklesDB implements a concurrent hash table as a primary in-memory storage mechanism.
+
+### Pagination Algorithm
+The pagination algorithm is based on the clock algorithm with a second chance. Each entry is stored in an auxiliary hash map, and every 3 seconds a round of the algorithm is scheduled. In the first round, it sets the flags of each entry to false, and after another 3 seconds, it checks how many entries are still set to false — these will be removed from the algorithm. <br>
+The algorithm is implemented in the file called detector_buffer.go 
+
+### Recovery Algorithm
+The recovery algorithm is implemented also in the store package, this way is possibile to log in the WAL all the occuring entries, and to reconstruct the memory content after a crash by reading the WAL.
+Writing to the WAL does not require a global lock, thanks to the implementation of the single-writer (or singular update) pattern.
