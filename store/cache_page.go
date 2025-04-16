@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"errors"
 	"sync"
+	"knucklesdb/vvector"
 )
 
 const (
@@ -42,6 +43,9 @@ type Bucket struct {
 
 type CollisionBufferNode struct {
 	bucketNode Bucket
+	
+	// version vector that keeps track of the versions
+	nodeVersionVector *vvector.DataVersioning
 	next       *CollisionBufferNode
 }
 
@@ -66,6 +70,7 @@ func newCollisionBuffer() *CollisionBuffer {
 func newCollisionBufferNode(bucket Bucket) *CollisionBufferNode {
 	return &CollisionBufferNode{
 		bucketNode: bucket,
+		nodeVersionVector: vvector.NewDataVersioning(),
 		next:       nil,
 	}
 }
@@ -87,12 +92,17 @@ func (p *Page) AddPage(key, value []byte, logicalClock int) {
 	b.bucketData = fillBucket(key, value)
 	b.knucklesClock = logicalClock
 
+	// create the node
 	node = newCollisionBufferNode(b)
 
 	cheatNode, ok := checkDuplicateKeys(p.collisionList.head, key)
 	if ok {
 		cheatNode.bucketNode.bucketData = b.bucketData
 		cheatNode.bucketNode.knucklesClock = logicalClock
+
+		// if the node already exist in the data structure
+		// i just increment the counter representing the versions.
+		cheatNode.nodeVersionVector.versionVector.IncrementVector()
 	} else {
 		if p.collisionList.head == nil {
 			p.collisionList.head = node
