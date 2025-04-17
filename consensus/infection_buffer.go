@@ -2,12 +2,15 @@ package consensus
 
 import (
 	"knucklesdb/vvector"
+	"sync"
+	"slices"
 )
 
 type InfectionBuffer struct {
 	buffer chan Entry
 	serializedEntriesToSpread []byte
 	versionVectorMarshaler *vvector.VersionVectorMessage
+	lock sync.Mutex
 }
 
 func NewInfectionBuffer(marshaler *vvector.VersionVectorMessage) *InfectionBuffer {
@@ -29,7 +32,21 @@ func (i *InfectionBuffer) ReadInfectionToSpread() {
 			if err != nil {
 				// log error
 			}
-			serializedEntriesToSpread = append(serializedEntriesToSpread, encodedMessage)
+			i.addEntryToTheSlice(encodedMessage)
 		}
 	}
+}
+
+func (i *InfectionBuffer) addEntryToTheSlice(entry []byte) {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
+	i.serializedEntriesToSpread = append(i.serializedEntriesToSpread, entry)
+}
+
+func (i *InfectionBuffer) DeleteEntriesFromSlice() {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
+	i.serializedEntriesToSpread = slices.Delete(i.serializedEntriesToSpread, 1, 5)
 }
