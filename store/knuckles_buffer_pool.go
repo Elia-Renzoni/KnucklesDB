@@ -8,6 +8,10 @@
 package store
 
 import (
+	"knucklesdb/vvector"
+)
+
+import (
 	"errors"
 )
 
@@ -48,15 +52,15 @@ func (b *BufferPool) WritePage(pageID int, key, value []byte, clock int) {
 *   @return miss or hit
 *	@return value
  */
-func (b *BufferPool) ReadPage(pageID int, key []byte) (error, []byte) {
+func (b *BufferPool) ReadPage(pageID int, key []byte) (error, []byte, *vvector.DataVersioning) {
 	var page *Page = b.pages[pageID]
 
 	if page == nil {
-		return errors.New("Cache Miss"), nil
+		return errors.New("Cache Miss"), nil, nil
 	}
 
-	err, value := page.ReadValueFromBucket(key)
-	return err, value
+	err, value, version := page.ReadValueFromBucket(key, llwNeeded)
+	return err, value, version
 }
 
 /**

@@ -123,7 +123,7 @@ func (p *Page) AddPage(key, value []byte, logicalClock int) {
 *	@return error value indicating the result of the operation
 *	@return value to return <key, value>
 **/
-func (p *Page) ReadValueFromBucket(key []byte) (error, []byte) {
+func (p *Page) ReadValueFromBucket(key []byte, llw bool) (error, []byte, *vvector.DataVersioning) {
 	var (
 		node *CollisionBufferNode = p.collisionList.head
 	)
@@ -135,12 +135,12 @@ func (p *Page) ReadValueFromBucket(key []byte) (error, []byte) {
 		nodeBucketData := node.bucketNode.bucketData
 		if result := bytes.Contains(nodeBucketData[:], key); result {
 			_, valueToRetrieve, _ := bytes.Cut(nodeBucketData[:], []byte("@"))
-			return nil, valueToRetrieve
+			return nil, valueToRetrieve, node.nodeVersionVector
 		}
 		node = node.next
 	}
 
-	return errors.New("Cache Miss"), nil
+	return errors.New("Cache Miss"), nil, nil
 }
 
 /**
