@@ -11,25 +11,57 @@ package consensus
 import (
 	"net"
 	"context"
+	"time"
+	"knucklesdb/swim"
+	"knucklesdb/wal"
+	"fmt"
+	"bytes"
 )
 
 type Gossip struct {
 	gossipConn net.Conn
 	infectionBuffer *InfectionBuffer
 	gossipContext context.Context
+	gossipTimeout time.Duration
+	ackMessage swim.AckMessage
+	infoLogger *wal.InfoLogger
 }
 
 
-func NewGossip(buffer *InfectionBuffer) *Gossip {
+func NewGossip(buffer *InfectionBuffer, timeout time.Duration, logger *wal.InfoLogger) *Gossip {
 	return &Gossip{
 		spreadingBuffer: make(chan Entry, 5),
 		infectionBuffer: buffer,
 		gossipContext: context.Background(),
+		gossipTimeout: timeout,
+		infoLogger: logger,
 	}
 }
 
-func (g *Gossip) send(host, port string) {
+func (g *Gossip) Send(address string) {
+	ctx, cancel := context.WithTimeout(g.gossipContext, g.gossipTimeout)
+	defer cancel()
 
+	conn, err := net.Dial("tcp", nodeAddress)
+	if err != nil {
+		d.errorLogger.ReportError(err)
+		return
+	}
+	defer conn.Close()
+
+	conn.Write(gossipMessage)
+
+	data := make([]byte, 2024)
+
+	select {
+	case <-ctx.Done():
+		d.errorLogger.ReportError(errors.New("Gossip Send Failed due to Context Timeout"))
+	default:
+		count, _ := conn.Read(data)
+		json.Unmarshal(data[:count], &g.ackMessage)
+
+		g.infoLogger.ReportInfo(fmt.Sprintf("Ack Message: %d", g.ackMessage.AckContent))
+	}
 }
 
 func (g *Gossip) PrepareBuffer() (splittedBuffer [][]byte) {
@@ -45,4 +77,32 @@ func (g *Gossip) IsBufferEmpty() bool {
 		return true
 	}
 	return false
+}
+
+/*
+*	@brief this method check if in the received pipelined
+*	there are the same hash values. If there are the same
+*	keys the method perform a partial LLW between the Pipeline
+*	and then between the LLW winner and the memory content.
+*/
+func (g *Gossip) PipelinedLLW(pipeline []PipelinedMessage, winnerNode *vvector.VersionVectorMessage) {
+
+	for pipelineNodeIndex := range pipeline {
+		for innerNodeIndex := range pipeline {
+			outerNodeKey := pipeline[pipelineNodeIndex].key
+			
+			if bytes.Equal(outerNodeKey, pipeline[innerNodeIndex].key) {
+				// perform a local LLW operation between entries
+				outerNodeVersionVector := pipeline[pipelineNodeIndex].version
+				innerNodeVersionVector := pipeline[innerNodeIndex].version
+
+				switch {
+				case outerNodeVersionVector > innerNodeVersionVector:
+					*winnerNode: pipeline[pipelineNodeIndex]
+				case innerNodeVersionVector < outerNodeVersionVector:
+					*winnerNode: pipeline[innerNodeIndex]
+				}
+			}
+		}
+	}
 }
