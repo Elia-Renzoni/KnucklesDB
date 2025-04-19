@@ -5,13 +5,11 @@ import (
 )
 
 type VersionVector struct {
-	nodeID      id.UUID
 	dataVersion int64
 }
 
-func NewVersionVector(node id.UUID) VersionVector {
+func NewVersionVector() VersionVector {
 	return VersionVector{
-		nodeID:      node,
 		dataVersion: 0,
 	}
 }

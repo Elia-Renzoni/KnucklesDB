@@ -7,7 +7,7 @@ type DataVersioning struct {
 	versionVector VersionVector
 }
 
-func NewDataVersioning(nodeId id.UUID) *DataVersioning {
+func NewDataVersioning() *DataVersioning {
 	return &DataVersioning{
 		order:       -1,
 		versionVector: NewVersionVector(nodeId),
