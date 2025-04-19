@@ -6,6 +6,8 @@ import (
 	"knucklesdb/store"
 	"knucklesdb/swim"
 	"knucklesdb/wal"
+	"knucklesdb/consensus"
+	"knucklesdb/vvector"
 	"net"
 	"strconv"
 	"time"
@@ -25,6 +27,7 @@ type Replica struct {
 	logger           *wal.ErrorsLogger
 	infoLogger       *wal.InfoLogger
 	swimGossip       *swim.Dissemination
+	gossipConsensus  *gossip.Gossip
 }
 
 type SwimProtocolMessages struct {
@@ -267,5 +270,9 @@ func (r *Replica) handleJoinMembershipMessage(conn net.Conn, buffer []byte, buff
 }
 
 func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer []byte, messageBufferLength int) {
+
+}
+
+func (r *Replica) performLLW() {
 
 }

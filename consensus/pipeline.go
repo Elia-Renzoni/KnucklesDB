@@ -5,5 +5,6 @@ import (
 )
 
 type PipelinedMessage struct {
-	Pipeline []vvector.VersionVectorMessage
+	MessageType string `json:"type"`
+	Pipeline []vvector.VersionVectorMessage `json:"data"`
 }

@@ -16,6 +16,7 @@ import (
 	"knucklesdb/wal"
 	"fmt"
 	"bytes"
+	"encoding/json"
 )
 
 type Gossip struct {
@@ -38,7 +39,7 @@ func NewGossip(buffer *InfectionBuffer, timeout time.Duration, logger *wal.InfoL
 	}
 }
 
-func (g *Gossip) Send(address string) {
+func (g *Gossip) Send(address string, gossipMessage []byte) {
 	ctx, cancel := context.WithTimeout(g.gossipContext, g.gossipTimeout)
 	defer cancel()
 
@@ -77,6 +78,20 @@ func (g *Gossip) IsBufferEmpty() bool {
 		return true
 	}
 	return false
+}
+
+func (g *Gossip) MarshalPipeline(splittedBuffer [][]byte) ([]byte, error) {
+	var (
+		marshaledPipeline []byte
+		err error
+	)
+
+	marshaledPipeline, err = json.Marshal(map[string]any{
+		"type": "gossip",
+		"data": splittedBuffer,
+	})
+
+	return marshaledPipeline, err
 }
 
 /*
