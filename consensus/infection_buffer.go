@@ -4,6 +4,7 @@ import (
 	"knucklesdb/vvector"
 	"sync"
 	"slices"
+	"knucklesdb/wal"
 )
 
 type InfectionBuffer struct {
@@ -11,12 +12,14 @@ type InfectionBuffer struct {
 	serializedEntriesToSpread []byte
 	versionVectorMarshaler *vvector.VersionVectorMessage
 	lock sync.Mutex
+	errorlogger *wal.ErrorsLogger
 }
 
-func NewInfectionBuffer(marshaler *vvector.VersionVectorMessage) *InfectionBuffer {
+func NewInfectionBuffer(marshaler *vvector.VersionVectorMessage, logger *wal.ErrorsLogger) *InfectionBuffer {
 	return &InfectionBuffer{
 		buffer: make(chan Entry),
 		serializedEntriesToSpread: make([][]byte, 0),
+		errorlogger: logger,
 	}
 }
 
@@ -30,7 +33,8 @@ func (i *InfectionBuffer) ReadInfectionToSpread() {
 		case entry := <- i.buffer:
 			encodedMessage, err := i.versionVectorMarshaler.MarshalVersionVectorMessage(entry.key, entry.value, entry.version)
 			if err != nil {
-				// log error
+				i.errorlogger.ReportError(err)
+				return
 			}
 			i.addEntryToTheSlice(encodedMessage)
 		}
