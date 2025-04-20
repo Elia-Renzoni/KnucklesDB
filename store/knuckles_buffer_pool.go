@@ -34,14 +34,14 @@ func NewBufferPool() *BufferPool {
 *   @param value to store
 *   @param logical clock
  */
-func (b *BufferPool) WritePage(pageID int, key, value []byte, clock int) {
+func (b *BufferPool) WritePage(pageID int, key, value []byte, version int) {
 	var page *Page = b.pages[pageID]
 	if page == nil {
 		page = Palloc(clock)
-		page.AddPage(key, value, clock)
+		page.AddPage(key, value, version)
 		b.pages[pageID] = page
 	} else {
-		page.AddPage(key, value, clock)
+		page.AddPage(key, value, version)
 	}
 }
 
@@ -52,11 +52,11 @@ func (b *BufferPool) WritePage(pageID int, key, value []byte, clock int) {
 *   @return miss or hit
 *	@return value
  */
-func (b *BufferPool) ReadPage(pageID int, key []byte) (error, []byte, *vvector.DataVersioning) {
+func (b *BufferPool) ReadPage(pageID int, key []byte) (error, []byte, int) {
 	var page *Page = b.pages[pageID]
 
 	if page == nil {
-		return errors.New("Cache Miss"), nil, nil
+		return errors.New("Cache Miss"), nil, 0
 	}
 
 	err, value, version := page.ReadValueFromBucket(key, llwNeeded)

@@ -21,6 +21,8 @@ const (
 	// retrevail phase can become more speedy
 	// key@value
 	SEPARATOR rune = '@'
+
+	INCREMENT_VERSION int = 0
 )
 
 type Page struct {
@@ -45,7 +47,7 @@ type CollisionBufferNode struct {
 	bucketNode Bucket
 	
 	// version vector that keeps track of the versions
-	nodeVersionVector *vvector.DataVersioning
+	nodeVersionVector int
 	next       *CollisionBufferNode
 }
 
@@ -70,7 +72,7 @@ func newCollisionBuffer() *CollisionBuffer {
 func newCollisionBufferNode(bucket Bucket) *CollisionBufferNode {
 	return &CollisionBufferNode{
 		bucketNode: bucket,
-		nodeVersionVector: vvector.NewDataVersioning(),
+		nodeVersionVector: 0,
 		next:       nil,
 	}
 }
@@ -80,7 +82,7 @@ func newCollisionBufferNode(bucket Bucket) *CollisionBufferNode {
 *   @param key
 *   @param value
 **/
-func (p *Page) AddPage(key, value []byte, logicalClock int) {
+func (p *Page) AddPage(key, value []byte, version int) {
 	var (
 		b                 Bucket = Bucket{}
 		node, currentNode *CollisionBufferNode
@@ -98,11 +100,15 @@ func (p *Page) AddPage(key, value []byte, logicalClock int) {
 	cheatNode, ok := checkDuplicateKeys(p.collisionList.head, key)
 	if ok {
 		cheatNode.bucketNode.bucketData = b.bucketData
-		cheatNode.bucketNode.knucklesClock = logicalClock
 
-		// if the node already exist in the data structure
-		// i just increment the counter representing the versions.
-		cheatNode.nodeVersionVector.versionVector.IncrementVector()
+		// if the parameter version is equal to 0 is time to increment
+		// the version, otherwise is equal to any non zero values i just
+		// update the version by overwriting it.
+		if version == INCREMENT_VERSION {
+			cheatNode.nodeVersionVector += 1
+		} else {
+			cheatNode.nodeVersionVector = version
+		}
 	} else {
 		if p.collisionList.head == nil {
 			p.collisionList.head = node
@@ -123,7 +129,7 @@ func (p *Page) AddPage(key, value []byte, logicalClock int) {
 *	@return error value indicating the result of the operation
 *	@return value to return <key, value>
 **/
-func (p *Page) ReadValueFromBucket(key []byte, llw bool) (error, []byte, *vvector.DataVersioning) {
+func (p *Page) ReadValueFromBucket(key []byte, llw bool) (error, []byte, int) {
 	var (
 		node *CollisionBufferNode = p.collisionList.head
 	)
@@ -140,7 +146,7 @@ func (p *Page) ReadValueFromBucket(key []byte, llw bool) (error, []byte, *vvecto
 		node = node.next
 	}
 
-	return errors.New("Cache Miss"), nil, nil
+	return errors.New("Cache Miss"), nil, 
 }
 
 /**

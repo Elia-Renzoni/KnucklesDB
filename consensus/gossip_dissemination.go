@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"bytes"
 	"encoding/json"
+	"slices"
 )
 
 type Gossip struct {
@@ -100,7 +101,7 @@ func (g *Gossip) MarshalPipeline(splittedBuffer [][]byte) ([]byte, error) {
 *	keys the method perform a partial LLW between the Pipeline
 *	and then between the LLW winner and the memory content.
 */
-func (g *Gossip) PipelinedLLW(pipeline []PipelinedMessage, winnerNode *vvector.VersionVectorMessage) {
+func (g *Gossip) PipelinedLLW(pipeline []vvector.VersionVectorMessage) {
 
 	for pipelineNodeIndex := range pipeline {
 		for innerNodeIndex := range pipeline {
@@ -113,9 +114,9 @@ func (g *Gossip) PipelinedLLW(pipeline []PipelinedMessage, winnerNode *vvector.V
 
 				switch {
 				case outerNodeVersionVector > innerNodeVersionVector:
-					*winnerNode: pipeline[pipelineNodeIndex]
-				case innerNodeVersionVector < outerNodeVersionVector:
-					*winnerNode: pipeline[innerNodeIndex]
+					pipeline = slices.Delete(pipeline, innerNodeIndex, innerNodeIndex)
+				case innerNodeVersionVector > outerNodeVersionVector:
+					pipeline = slices.Delete(pipeline, pipelineNodeIndex, pipelineNodeIndex)
 				}
 			}
 		}

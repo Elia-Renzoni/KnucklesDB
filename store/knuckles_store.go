@@ -44,7 +44,7 @@ func NewKnucklesMap(bPool *BufferPool, t *AddressBinder, h *SpookyHash, queue *S
 *	@param key
 *   @param value
 **/
-func (k *KnucklesMap) Set(key []byte, value []byte) {
+func (k *KnucklesMap) Set(key []byte, value []byte, version int) {
 	var (
 		hash   uint32
 		pageID uint32
@@ -52,7 +52,7 @@ func (k *KnucklesMap) Set(key []byte, value []byte) {
 
 	hash = k.hasher.Hash32(key)
 	pageID = k.addressTranslator.TranslateHash(hash)
-	k.bufferPool.WritePage(int(pageID), key, value, 0)
+	k.bufferPool.WritePage(int(pageID), key, value, version)
 	k.updateQueue.AddVictimPage(NewVictim(key, int(pageID)))
 
 	// write the operation to the WAL to reach strong durability.

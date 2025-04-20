@@ -1,7 +1,7 @@
 package vvector
 
 const (
-	CONCURRENT int = iota * 1
-	AFTER
-	BEFORE
+	HAPPENS_CONCURRENT int = iota * 1
+	HAPPENS_AFTER
+	HAPPENS_BEFORE
 )
