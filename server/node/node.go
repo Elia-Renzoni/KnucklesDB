@@ -277,12 +277,18 @@ func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer [
 	json.Unmarshal(messageBuffer[:messageBufferLength], &r.versionVectorMessage)
 
 	// performing a LLW between the received pipeline of messages
-	gossipConsensus.PipelinedLLW(r.versionVectorMessage.Pipeline)
+	r.gossipConsensus.PipelinedLLW(r.versionVectorMessage.Pipeline)
 	
 	// perfoming a LLW between the received pipeline and the memory content.
 	r.performLLW(r.versionVectorMessage.Pipeline)
 
-	// gossip cycle.
+	// start a new gossip round
+	if r.versionVectorUtils.Order == vvector.HAPPENS_AFTER {
+		fanoutList := r.gossipConsensus.SetFanoutList()
+		for nodeIndex := range fanoutList {
+			r.gossipConsensus.Send(fanoutList[nodeIndex], messageBuffer[:messageBufferLength])
+		}
+	}
 }
 
 func (r *Replica) performLLW(pipeline []vvector.VersionVectorMessage) {
