@@ -3,11 +3,11 @@ package node
 import (
 	"context"
 	"encoding/json"
+	"knucklesdb/consensus"
 	"knucklesdb/store"
 	"knucklesdb/swim"
-	"knucklesdb/wal"
-	"knucklesdb/consensus"
 	"knucklesdb/vvector"
+	"knucklesdb/wal"
 	"net"
 	"strconv"
 	"time"
@@ -16,20 +16,20 @@ import (
 )
 
 type Replica struct {
-	replicaID        id.UUID
-	address          string
-	listenPort       string
-	kMap             *store.KnucklesMap
-	protocolMessages SwimProtocolMessages
+	replicaID            id.UUID
+	address              string
+	listenPort           string
+	kMap                 *store.KnucklesMap
+	protocolMessages     SwimProtocolMessages
 	versionVectorMessage vvector.PipelinedMessage
-	timeoutTime      time.Duration
-	swimMarshaler    *swim.ProtocolMarshaer
-	clusterJoiner    *swim.ClusterManager
-	logger           *wal.ErrorsLogger
-	infoLogger       *wal.InfoLogger
-	swimGossip       *swim.Dissemination
-	gossipConsensus  *consensus.Gossip
-	versionVectorUtils *vvector.DataVersioning
+	timeoutTime          time.Duration
+	swimMarshaler        *swim.ProtocolMarshaer
+	clusterJoiner        *swim.ClusterManager
+	logger               *wal.ErrorsLogger
+	infoLogger           *wal.InfoLogger
+	swimGossip           *swim.Dissemination
+	gossipConsensus      *consensus.Gossip
+	versionVectorUtils   *vvector.DataVersioning
 }
 
 type SwimProtocolMessages struct {
@@ -39,7 +39,6 @@ type SwimProtocolMessages struct {
 	SpreadedList        swim.MembershipListMessage
 	NodeUpdate          swim.SWIMUpdateMessage
 }
-
 
 type Message struct {
 	MethodType string `json:"type"`
@@ -52,17 +51,17 @@ func NewReplica(address string, port string, dbMap *store.KnucklesMap, timeout t
 	infosLog *wal.InfoLogger, dissemination *swim.Dissemination, gossip *consensus.Gossip,
 	versionVector *vvector.DataVersioning) *Replica {
 	return &Replica{
-		replicaID:     id.New(),
-		address:       address,
-		listenPort:    port,
-		kMap:          dbMap,
-		timeoutTime:   timeout,
-		swimMarshaler: marshaler,
-		clusterJoiner: clusterData,
-		logger:        errLogger,
-		infoLogger:    infosLog,
-		swimGossip:    dissemination,
-		gossipConsensus: gossip,
+		replicaID:          id.New(),
+		address:            address,
+		listenPort:         port,
+		kMap:               dbMap,
+		timeoutTime:        timeout,
+		swimMarshaler:      marshaler,
+		clusterJoiner:      clusterData,
+		logger:             errLogger,
+		infoLogger:         infosLog,
+		swimGossip:         dissemination,
+		gossipConsensus:    gossip,
 		versionVectorUtils: versionVector,
 	}
 }
@@ -281,7 +280,7 @@ func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer [
 
 	// performing a LLW between the received pipeline of messages
 	r.gossipConsensus.PipelinedLLW(r.versionVectorMessage.Pipeline)
-	
+
 	// perfoming a LLW between the received pipeline and the memory content.
 	r.performLLW(r.versionVectorMessage.Pipeline)
 
@@ -303,9 +302,9 @@ func (r *Replica) performLLW(pipeline []vvector.VersionVectorMessage) {
 		} else {
 			// if the value is already in the buffer pool we need to confront the
 			// versions to get a correct LLW.
-			r.versionVectorUtils.CompareAndUpdateVersions(pipeline[pipelineNodeIndex], inMemoryVersion)		
+			r.versionVectorUtils.CompareAndUpdateVersions(pipeline[pipelineNodeIndex], inMemoryVersion)
 			switch r.versionVectorUtils.Order {
-			case vvector.HAPPENS_AFTER: 
+			case vvector.HAPPENS_AFTER:
 				// if the received version is greater then update the memorized version
 				// otherwise the memorized version is more updated.
 				r.kMap.Set(pipeline[pipelineNodeIndex].key, pipeline[pipelineNodeIndex].value, pipeline[pipelineNodeIndex].version)
