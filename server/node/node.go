@@ -49,7 +49,8 @@ type Message struct {
 
 func NewReplica(address string, port string, dbMap *store.KnucklesMap, timeout time.Duration,
 	marshaler *swim.ProtocolMarshaer, clusterData *swim.ClusterManager, errLogger *wal.ErrorsLogger,
-	infosLog *wal.InfoLogger, dissemination *swim.Dissemination) *Replica {
+	infosLog *wal.InfoLogger, dissemination *swim.Dissemination, gossip *consensus.Gossip,
+	versionVector *vvector.DataVersioning) *Replica {
 	return &Replica{
 		replicaID:     id.New(),
 		address:       address,
@@ -61,6 +62,8 @@ func NewReplica(address string, port string, dbMap *store.KnucklesMap, timeout t
 		logger:        errLogger,
 		infoLogger:    infosLog,
 		swimGossip:    dissemination,
+		gossipConsensus: gossip,
+		versionVectorUtils: versionVector,
 	}
 }
 

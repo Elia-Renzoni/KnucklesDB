@@ -6,6 +6,8 @@ import (
 	"knucklesdb/store"
 	"knucklesdb/swim"
 	"knucklesdb/wal"
+	"knucklesdb/consensus"
+	"knucklesdb/vvector"
 	"strconv"
 	"sync"
 	"time"
@@ -25,6 +27,11 @@ func main() {
 	errorsLogger := wal.NewErrorsLogger()
 	infoLogger := wal.NewInfoLogger()
 
+	versionVectorMarshaler := vvector.NewVersionVectorMarshaler()
+
+	infenctionBuffer := consensus.NewInfectionBuffer(versionVectorMarshaler, errorsLogger)
+	gossipAntiEntropy := consensus.NewGossip(infectionBuffer, timeoutDuration, infoLogger)
+
 	walLogger := wal.NewWAL(errorsLogger)
 	queueUpdateLogger := wal.NewLockFreeQueue(walLogger, infoLogger)
 
@@ -33,6 +40,8 @@ func main() {
 
 	spreader := swim.NewDissemination(timeoutDuration, infoLogger, errorsLogger, cluster, marshaler)
 	joiner := swim.NewClusterManager(cluster, errorsLogger, spreader)
+
+	antiEntropy := consensus.NewAntiEntropy(gossipAntiEntropy, joiner, infoLogger)
 
 	swimFailureDetector := swim.NewSWIMFailureDetector(joiner, cluster, marshaler, kHelperNodes, routineSchedulingTime, timeoutDuration, infoLogger, errorsLogger, spreader)
 
@@ -66,6 +75,8 @@ func main() {
 	go failureDetector.ClockPageEviction()
 	go updateQueue.UpdateQueueReader()
 	go queueUpdateLogger.EntryReader()
+	go infenctionBuffer.ReadInfectionToSpread()
+	go antiEntropy.ScheduleAntiEntropy()
 
 	replica.Start()
 }

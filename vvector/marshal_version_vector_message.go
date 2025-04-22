@@ -7,6 +7,10 @@ import (
 type VersionVectorMarshaler struct {
 }
 
+func NewVersionVectorMarshaler() *VersionVectorMarshaler {
+	return &VersionVectorMarshaler{}
+}
+
 
 func (v *VersionVectorMarshaler) MarshalVersionVectorMessage(key, value []byte, version int64) ([]byte, error) {
 	var (
