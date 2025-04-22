@@ -7,9 +7,6 @@
 
 package store
 
-import (
-	"knucklesdb/vvector"
-)
 
 import (
 	"errors"
@@ -37,7 +34,7 @@ func NewBufferPool() *BufferPool {
 func (b *BufferPool) WritePage(pageID int, key, value []byte, version int) {
 	var page *Page = b.pages[pageID]
 	if page == nil {
-		page = Palloc(clock)
+		page = Palloc(pageID)
 		page.AddPage(key, value, version)
 		b.pages[pageID] = page
 	} else {
@@ -59,7 +56,7 @@ func (b *BufferPool) ReadPage(pageID int, key []byte) (error, []byte, int) {
 		return errors.New("Cache Miss"), nil, 0
 	}
 
-	err, value, version := page.ReadValueFromBucket(key, llwNeeded)
+	err, value, version := page.ReadValueFromBucket(key)
 	return err, value, version
 }
 

@@ -18,6 +18,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"slices"
+	"errors"
+	"knucklesdb/vvector"
 )
 
 type Gossip struct {
@@ -27,16 +29,17 @@ type Gossip struct {
 	gossipTimeout time.Duration
 	ackMessage swim.AckMessage
 	infoLogger *wal.InfoLogger
+	errorLogger *wal.ErrorsLogger
 }
 
 
-func NewGossip(buffer *InfectionBuffer, timeout time.Duration, logger *wal.InfoLogger) *Gossip {
+func NewGossip(buffer *InfectionBuffer, timeout time.Duration, logger *wal.InfoLogger, errorLogger *wal.ErrorsLogger) *Gossip {
 	return &Gossip{
-		spreadingBuffer: make(chan Entry, 5),
 		infectionBuffer: buffer,
 		gossipContext: context.Background(),
 		gossipTimeout: timeout,
 		infoLogger: logger,
+		errorLogger: errorLogger,
 	}
 }
 
@@ -44,9 +47,9 @@ func (g *Gossip) Send(address string, gossipMessage []byte) {
 	ctx, cancel := context.WithTimeout(g.gossipContext, g.gossipTimeout)
 	defer cancel()
 
-	conn, err := net.Dial("tcp", nodeAddress)
+	conn, err := net.Dial("tcp", address)
 	if err != nil {
-		d.errorLogger.ReportError(err)
+		g.errorLogger.ReportError(err)
 		return
 	}
 	defer conn.Close()
@@ -57,7 +60,7 @@ func (g *Gossip) Send(address string, gossipMessage []byte) {
 
 	select {
 	case <-ctx.Done():
-		d.errorLogger.ReportError(errors.New("Gossip Send Failed due to Context Timeout"))
+		g.errorLogger.ReportError(errors.New("Gossip Send Failed due to Context Timeout"))
 	default:
 		count, _ := conn.Read(data)
 		json.Unmarshal(data[:count], &g.ackMessage)
@@ -105,12 +108,12 @@ func (g *Gossip) PipelinedLLW(pipeline []vvector.VersionVectorMessage) {
 
 	for pipelineNodeIndex := range pipeline {
 		for innerNodeIndex := range pipeline {
-			outerNodeKey := pipeline[pipelineNodeIndex].key
+			outerNodeKey := pipeline[pipelineNodeIndex].Key
 			
-			if bytes.Equal(outerNodeKey, pipeline[innerNodeIndex].key) {
+			if bytes.Equal(outerNodeKey, pipeline[innerNodeIndex].Key) {
 				// perform a local LLW operation between entries
-				outerNodeVersionVector := pipeline[pipelineNodeIndex].version
-				innerNodeVersionVector := pipeline[innerNodeIndex].version
+				outerNodeVersionVector := pipeline[pipelineNodeIndex].Version
+				innerNodeVersionVector := pipeline[innerNodeIndex].Version
 
 				switch {
 				case outerNodeVersionVector > innerNodeVersionVector:

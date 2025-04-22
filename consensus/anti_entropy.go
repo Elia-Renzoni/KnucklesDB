@@ -4,7 +4,6 @@ import (
 	"knucklesdb/swim"
 	"knucklesdb/wal"
 	"time"
-	"strconv"
 )
 
 type AntiEntropy struct {
@@ -48,7 +47,7 @@ func (a *AntiEntropy) ScheduleAntiEntropy() {
 		clusterList := a.membershipList.SetFanoutList()
 
 		for _, nodeInfos := range clusterList {
-			a.gossipProtocol.Send(nodeInfos.nodeAddress, message)
+			a.gossipProtocol.Send(nodeInfos, message)
 		}		
 	}
 }

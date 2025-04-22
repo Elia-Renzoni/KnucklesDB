@@ -5,9 +5,6 @@
 **/
 package store
 
-import (
-	"knucklesdb/vvector"
-)
 
 
 type KnucklesMap struct {
@@ -64,7 +61,7 @@ func (k *KnucklesMap) Set(key []byte, value []byte, version int) {
 *	@param search key
 *	@return value stored in a bucket
  */
-func (k *KnucklesMap) Get(key []byte) (error, []byte, *vvector.DataVersioning) {
+func (k *KnucklesMap) Get(key []byte) (error, []byte, int) {
 	var (
 		hash   uint32
 		pageID uint32
@@ -72,6 +69,6 @@ func (k *KnucklesMap) Get(key []byte) (error, []byte, *vvector.DataVersioning) {
 
 	hash = k.hasher.Hash32(key)
 	pageID = k.addressTranslator.TranslateHash(hash)
-	err, value, version := k.bufferPool.ReadPage(int(pageID), key, llw)
+	err, value, version := k.bufferPool.ReadPage(int(pageID), key)
 	return err, value, version
 }

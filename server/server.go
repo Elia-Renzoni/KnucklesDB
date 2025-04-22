@@ -30,7 +30,7 @@ func main() {
 	versionVectorMarshaler := vvector.NewVersionVectorMarshaler()
 
 	infenctionBuffer := consensus.NewInfectionBuffer(versionVectorMarshaler, errorsLogger)
-	gossipAntiEntropy := consensus.NewGossip(infectionBuffer, timeoutDuration, infoLogger)
+	gossipAntiEntropy := consensus.NewGossip(infectionBuffer, timeoutDuration, infoLogger, errorsLogger)
 
 	walLogger := wal.NewWAL(errorsLogger)
 	queueUpdateLogger := wal.NewLockFreeQueue(walLogger, infoLogger)

@@ -23,4 +23,6 @@ func (v *VersionVectorMarshaler) MarshalVersionVectorMessage(key, value []byte, 
 		"value": value,
 		"version": version,
 	})
+
+	return encodedData, err
 }

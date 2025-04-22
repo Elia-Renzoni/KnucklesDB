@@ -10,7 +10,6 @@ import (
 	"bytes"
 	"errors"
 	"sync"
-	"knucklesdb/vvector"
 )
 
 const (
@@ -92,7 +91,6 @@ func (p *Page) AddPage(key, value []byte, version int) {
 	defer p.mutex.Unlock()
 
 	b.bucketData = fillBucket(key, value)
-	b.knucklesClock = logicalClock
 
 	// create the node
 	node = newCollisionBufferNode(b)
@@ -129,7 +127,7 @@ func (p *Page) AddPage(key, value []byte, version int) {
 *	@return error value indicating the result of the operation
 *	@return value to return <key, value>
 **/
-func (p *Page) ReadValueFromBucket(key []byte, llw bool) (error, []byte, int) {
+func (p *Page) ReadValueFromBucket(key []byte) (error, []byte, int) {
 	var (
 		node *CollisionBufferNode = p.collisionList.head
 	)
@@ -146,7 +144,7 @@ func (p *Page) ReadValueFromBucket(key []byte, llw bool) (error, []byte, int) {
 		node = node.next
 	}
 
-	return errors.New("Cache Miss"), nil, 
+	return errors.New("Cache Miss"), nil, 0
 }
 
 /**

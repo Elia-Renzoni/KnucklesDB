@@ -59,7 +59,7 @@ func (r *Recover) StartRecovery(dbState *KnucklesMap) {
 			select {
 			case entryToRestore := <-r.walRecoveryChannel.RecoveryChannel:
 				if entryToRestore.IsSet() {
-					dbState.Set(entryToRestore.Key, entryToRestore.Value)
+					dbState.Set(entryToRestore.Key, entryToRestore.Value, 0)
 				}
 			// the channel is closed.
 			default:

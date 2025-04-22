@@ -1,7 +1,5 @@
 package vvector
 
-import id "github.com/google/uuid"
-
 type DataVersioning struct {
 	Order       int
 }
@@ -12,13 +10,13 @@ func NewDataVersioning() *DataVersioning {
 	}
 }
 
-func (d *DataVersioning) CompareAndUpdateVersions(receivedVersion VersionVector, memorizedVersion int) {
+func (d *DataVersioning) CompareAndUpdateVersions(receivedVersion VersionVectorMessage, memorizedVersion int) {
 	switch {
-	case receivedVersion.dataVersion > memorizedVersion:
+	case receivedVersion.Version > memorizedVersion:
 		d.Order = HAPPENS_BEFORE
-	case receivedVersion.dataVersion < memorizedVersion:
+	case receivedVersion.Version < memorizedVersion:
 		d.Order = HAPPENS_AFTER
-	case receivedVersion.dataVersion == memorizedVersion:
+	case receivedVersion.Version == memorizedVersion:
 		d.Order = HAPPENS_CONCURRENT
 	}
 }

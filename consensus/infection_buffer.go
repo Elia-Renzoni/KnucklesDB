@@ -10,12 +10,12 @@ import (
 type InfectionBuffer struct {
 	buffer chan Entry
 	serializedEntriesToSpread []byte
-	versionVectorMarshaler *vvector.versionVectorMarshaler
+	versionVectorMarshaler *vvector.VersionVectorMarshaler
 	lock sync.Mutex
 	errorlogger *wal.ErrorsLogger
 }
 
-func NewInfectionBuffer(marshaler *vvector.versionVectorMarshaler, logger *wal.ErrorsLogger) *InfectionBuffer {
+func NewInfectionBuffer(marshaler *vvector.VersionVectorMarshaler, logger *wal.ErrorsLogger) *InfectionBuffer {
 	return &InfectionBuffer{
 		buffer: make(chan Entry),
 		serializedEntriesToSpread: make([][]byte, 0),

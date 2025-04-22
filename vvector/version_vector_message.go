@@ -1,7 +1,7 @@
 package vvector
 
 type VersionVectorMessage struct {
-	key []byte   `json:"key"`
-	value []byte `json:"value"`
-	version int `json:"version"`
+	Key []byte   `json:"key"`
+	Value []byte `json:"value"`
+	Version int `json:"version"`
 }

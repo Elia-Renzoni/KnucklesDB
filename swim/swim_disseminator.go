@@ -8,6 +8,7 @@ import (
 	"knucklesdb/wal"
 	"net"
 	"time"
+	"strconv"
 )
 
 const MAX_GOSSIP_ATTEMPS int = 3
@@ -65,11 +66,11 @@ func (d *Dissemination) SpreadMembershipList(membershipList []*Node, fanoutList 
 func (d *Dissemination) TransformMembershipList(cluster MembershipListMessage) []*Node {
 	var (
 		clusterNodes []*Node = make([]*Node, 0)
-		node         MembershipEntry
 	)
 
 	for _, node := range cluster.List {
-		convertedNode := NewNode(node.NodeAddress, node.NodeListenPort, node.NodeStatus)
+		port, _ := strconv.Atoi(node.NodeListenPort)
+		convertedNode := NewNode(node.NodeAddress, port, node.NodeStatus)
 		clusterNodes = append(clusterNodes, convertedNode)
 	}
 
@@ -104,7 +105,7 @@ func (d *Dissemination) IsUpdateDifferent(update *Node) bool {
 		different bool = false
 	)
 
-	for _, node := d.cluster.clusterMetadata {
+	for _, node := range d.cluster.clusterMetadata {
 		if node.nodeAddress == update.nodeAddress {
 			if node.nodeListenPort == update.nodeListenPort {
 				if node.nodeStatus != update.nodeStatus {
