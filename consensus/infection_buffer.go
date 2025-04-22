@@ -5,11 +5,12 @@ import (
 	"sync"
 	"slices"
 	"knucklesdb/wal"
+	"bytes"
 )
 
 type InfectionBuffer struct {
 	buffer chan Entry
-	serializedEntriesToSpread []byte
+	serializedEntriesToSpread bytes.Buffer
 	versionVectorMarshaler *vvector.VersionVectorMarshaler
 	lock sync.Mutex
 	errorlogger *wal.ErrorsLogger
@@ -18,7 +19,7 @@ type InfectionBuffer struct {
 func NewInfectionBuffer(marshaler *vvector.VersionVectorMarshaler, logger *wal.ErrorsLogger) *InfectionBuffer {
 	return &InfectionBuffer{
 		buffer: make(chan Entry),
-		serializedEntriesToSpread: make([][]byte, 0),
+		serializedEntriesToSpread: make([]byte, 0),
 		versionVectorMarshaler: marshaler,
 		errorlogger: logger,
 	}
@@ -46,7 +47,8 @@ func (i *InfectionBuffer) addEntryToTheSlice(entry []byte) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
-	i.serializedEntriesToSpread = append(i.serializedEntriesToSpread, entry)
+	i.serializedEntriesToSpread.Write(entry)
+	i.serializedEntriesToSpread.Write(';')
 }
 
 func (i *InfectionBuffer) DeleteEntriesFromSlice() {

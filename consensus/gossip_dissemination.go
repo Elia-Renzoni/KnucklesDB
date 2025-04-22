@@ -69,8 +69,13 @@ func (g *Gossip) Send(address string, gossipMessage []byte) {
 	}
 }
 
-func (g *Gossip) PrepareBuffer() (splittedBuffer [][]byte) {
-	splittedBuffer = g.infectionBuffer.serializedEntriesToSpread[:5]
+func (g *Gossip) PrepareBuffer() []string {
+	var bufferContainingInfectionsToSend = make([]string, 0)
+	
+	for i := 0; i < 5; i++ {
+		str, _ := g.infectionBuffer.serializedEntriesToSpread.ReadString(';')
+		bufferContainingInfectionsToSend = append(bufferContainingInfectionsToSend, str)
+	}
 	
 	// delete the first five entries form the slice
 	g.infectionBuffer.DeleteEntriesFromSlice()
@@ -78,7 +83,7 @@ func (g *Gossip) PrepareBuffer() (splittedBuffer [][]byte) {
 }
 
 func (g *Gossip) IsBufferEmpty() bool {
-	if len(g.infectionBuffer.serializedEntriesToSpread) >= 5 {
+	if g.infectionBuffer.serializedEntriesToSpread.Len() >= 5 {
 		return true
 	}
 	return false
