@@ -2,12 +2,12 @@ package main
 
 import (
 	"flag"
+	"knucklesdb/consensus"
 	"knucklesdb/server/node"
 	"knucklesdb/store"
 	"knucklesdb/swim"
-	"knucklesdb/wal"
-	"knucklesdb/consensus"
 	"knucklesdb/vvector"
+	"knucklesdb/wal"
 	"strconv"
 	"sync"
 	"time"
@@ -29,8 +29,10 @@ func main() {
 
 	versionVectorMarshaler := vvector.NewVersionVectorMarshaler()
 
-	infenctionBuffer := consensus.NewInfectionBuffer(versionVectorMarshaler, errorsLogger)
+	infectionBuffer := consensus.NewInfectionBuffer(versionVectorMarshaler, errorsLogger)
 	gossipAntiEntropy := consensus.NewGossip(infectionBuffer, timeoutDuration, infoLogger, errorsLogger)
+
+	versioningUtils := vvector.NewDataVersioning()
 
 	walLogger := wal.NewWAL(errorsLogger)
 	queueUpdateLogger := wal.NewLockFreeQueue(walLogger, infoLogger)
@@ -53,7 +55,7 @@ func main() {
 	updateQueue := store.NewSingularUpdateQueue(failureDetector)
 	recover := store.NewRecover(queueUpdateLogger, walLogger, infoLogger)
 	storeMap := store.NewKnucklesMap(bufferPool, addressBind, hashAlgorithm, updateQueue, recover)
-	replica := node.NewReplica(*host, *port, storeMap, timeoutDuration, marshaler, joiner, errorsLogger, infoLogger, spreader)
+	replica := node.NewReplica(*host, *port, storeMap, timeoutDuration, marshaler, joiner, errorsLogger, infoLogger, spreader, gossipAntiEntropy, versioningUtils)
 
 	// start recovery session if needed
 	if full := walLogger.IsWALFull(); full {
@@ -75,7 +77,7 @@ func main() {
 	go failureDetector.ClockPageEviction()
 	go updateQueue.UpdateQueueReader()
 	go queueUpdateLogger.EntryReader()
-	go infenctionBuffer.ReadInfectionToSpread()
+	go infectionBuffer.ReadInfectionToSpread()
 	go antiEntropy.ScheduleAntiEntropy()
 
 	replica.Start()
