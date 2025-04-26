@@ -2,44 +2,43 @@
 *	SIR Gossip Model
 * 	In this gossip implementation the status is considered infected only if there are
 *	at least 5 updates. To spread the informations among the cluster the algorithm takes
-*	the most recent 5 updates and after encoding them in json, spread the updates among the 
+*	the most recent 5 updates and after encoding them in json, spread the updates among the
 *	cluster, by doing this the algorithm remove the most recent 5 updates from his local
 *	memory structure.
 **/
 package consensus
 
 import (
-	"net"
-	"context"
-	"time"
-	"knucklesdb/swim"
-	"knucklesdb/wal"
-	"fmt"
 	"bytes"
+	"context"
 	"encoding/json"
-	"slices"
 	"errors"
+	"fmt"
+	"knucklesdb/swim"
 	"knucklesdb/vvector"
+	"knucklesdb/wal"
+	"net"
+	"slices"
+	"time"
 )
 
 type Gossip struct {
-	gossipConn net.Conn
+	gossipConn      net.Conn
 	infectionBuffer *InfectionBuffer
-	gossipContext context.Context
-	gossipTimeout time.Duration
-	ackMessage swim.AckMessage
-	infoLogger *wal.InfoLogger
-	errorLogger *wal.ErrorsLogger
+	gossipContext   context.Context
+	gossipTimeout   time.Duration
+	ackMessage      swim.AckMessage
+	infoLogger      *wal.InfoLogger
+	errorLogger     *wal.ErrorsLogger
 }
-
 
 func NewGossip(buffer *InfectionBuffer, timeout time.Duration, logger *wal.InfoLogger, errorLogger *wal.ErrorsLogger) *Gossip {
 	return &Gossip{
 		infectionBuffer: buffer,
-		gossipContext: context.Background(),
-		gossipTimeout: timeout,
-		infoLogger: logger,
-		errorLogger: errorLogger,
+		gossipContext:   context.Background(),
+		gossipTimeout:   timeout,
+		infoLogger:      logger,
+		errorLogger:     errorLogger,
 	}
 }
 
@@ -71,15 +70,15 @@ func (g *Gossip) Send(address string, gossipMessage []byte) {
 
 func (g *Gossip) PrepareBuffer() []string {
 	var bufferContainingInfectionsToSend = make([]string, 0)
-	
+
 	for i := 0; i < 5; i++ {
 		str, _ := g.infectionBuffer.serializedEntriesToSpread.ReadString(';')
 		bufferContainingInfectionsToSend = append(bufferContainingInfectionsToSend, str)
 	}
-	
+
 	// delete the first five entries form the slice
 	g.infectionBuffer.DeleteEntriesFromSlice()
-	return
+	return bufferContainingInfectionsToSend
 }
 
 func (g *Gossip) IsBufferEmpty() bool {
@@ -89,10 +88,10 @@ func (g *Gossip) IsBufferEmpty() bool {
 	return false
 }
 
-func (g *Gossip) MarshalPipeline(splittedBuffer [][]byte) ([]byte, error) {
+func (g *Gossip) MarshalPipeline(splittedBuffer []string) ([]byte, error) {
 	var (
 		marshaledPipeline []byte
-		err error
+		err               error
 	)
 
 	marshaledPipeline, err = json.Marshal(map[string]any{
@@ -108,13 +107,13 @@ func (g *Gossip) MarshalPipeline(splittedBuffer [][]byte) ([]byte, error) {
 *	there are the same hash values. If there are the same
 *	keys the method perform a partial LLW between the Pipeline
 *	and then between the LLW winner and the memory content.
-*/
+ */
 func (g *Gossip) PipelinedLLW(pipeline []vvector.VersionVectorMessage) {
 
 	for pipelineNodeIndex := range pipeline {
 		for innerNodeIndex := range pipeline {
 			outerNodeKey := pipeline[pipelineNodeIndex].Key
-			
+
 			if bytes.Equal(outerNodeKey, pipeline[innerNodeIndex].Key) {
 				// perform a local LLW operation between entries
 				outerNodeVersionVector := pipeline[pipelineNodeIndex].Version

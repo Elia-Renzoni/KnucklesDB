@@ -31,23 +31,23 @@ func (a *AntiEntropy) ScheduleAntiEntropy() {
 	a.infoLogger.ReportInfo("Anti-Entropy Routine ON")
 	for {
 		a.sleepTime(1000 * time.Millisecond)
-		
+
 		// if the buffer is empty makes no sense to start a gossip
 		// cycle
-		if ok := a.gossipProtocol.IsBufferEmpty(); ok {
+		if ok := a.gossipProtocol.IsBufferEmpty(); !ok {
 			continue
 		}
 
-		// return the buffer containing all the marshaled entries.
+		// return the buffer containing the first five entries
 		encodedBufferToSend := a.gossipProtocol.PrepareBuffer()
 
-		message, _ := a.gossipProtocol.MarshalPipeline(encodedBufferToSend) 
+		message, _ := a.gossipProtocol.MarshalPipeline(encodedBufferToSend)
 
 		// send the pipeline containing the version to the chosen replicas
 		clusterList := a.membershipList.SetFanoutList()
 
 		for _, nodeInfos := range clusterList {
 			a.gossipProtocol.Send(nodeInfos, message)
-		}		
+		}
 	}
 }
