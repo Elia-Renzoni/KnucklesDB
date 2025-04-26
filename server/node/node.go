@@ -21,7 +21,7 @@ type Replica struct {
 	listenPort           string
 	kMap                 *store.KnucklesMap
 	protocolMessages     SwimProtocolMessages
-	versionVectorMessage vvector.PipelinedMessage
+	versionVectorMessage consensus.PipelinedMessage
 	timeoutTime          time.Duration
 	swimMarshaler        *swim.ProtocolMarshaer
 	clusterJoiner        *swim.ClusterManager
@@ -275,6 +275,7 @@ func (r *Replica) handleJoinMembershipMessage(conn net.Conn, buffer []byte, buff
 }
 
 func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer []byte, messageBufferLength int) {
+	defer conn.Close()
 	// unmarshal the message received by peers via gossip.
 	json.Unmarshal(messageBuffer[:messageBufferLength], &r.versionVectorMessage)
 
@@ -284,21 +285,27 @@ func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer [
 	// perfoming a LLW between the received pipeline and the memory content.
 	r.performLLW(r.versionVectorMessage.Pipeline)
 
+	// write an ack
+	ackMessage, _ := r.swimMarshaler.MarshalAckMessage(1)
+	conn.Write(ackMessage)
+
 	// start a new gossip round
 	if r.versionVectorUtils.Order == vvector.HAPPENS_AFTER {
-		fanoutList := r.gossipConsensus.SetFanoutList()
-		for nodeIndex := range fanoutList {
-			r.gossipConsensus.Send(fanoutList[nodeIndex], messageBuffer[:messageBufferLength])
-		}
+		go func() {
+			fanoutList := r.clusterJoiner.SetFanoutList()
+			for nodeIndex := range fanoutList {
+				r.gossipConsensus.Send(fanoutList[nodeIndex], messageBuffer[:messageBufferLength])
+			}
+		}()
 	}
 }
 
 func (r *Replica) performLLW(pipeline []vvector.VersionVectorMessage) {
 	for pipelineNodeIndex := range pipeline {
-		err, _, inMemoryVersion := r.kMap.Get(pipeline[pipelineNodeIndex].key)
+		err, _, inMemoryVersion := r.kMap.Get(pipeline[pipelineNodeIndex].Key)
 		if err != nil {
 			// the value is not in memory, we need to perform the first set
-			r.kMap.Set(pipeline[pipelineNodeIndex].key, pipeline[pipelineNodeIndex].value, pipeline[pipelineNodeIndex].version)
+			r.kMap.Set(pipeline[pipelineNodeIndex].Key, pipeline[pipelineNodeIndex].Value, pipeline[pipelineNodeIndex].Version)
 		} else {
 			// if the value is already in the buffer pool we need to confront the
 			// versions to get a correct LLW.
@@ -307,7 +314,7 @@ func (r *Replica) performLLW(pipeline []vvector.VersionVectorMessage) {
 			case vvector.HAPPENS_AFTER:
 				// if the received version is greater then update the memorized version
 				// otherwise the memorized version is more updated.
-				r.kMap.Set(pipeline[pipelineNodeIndex].key, pipeline[pipelineNodeIndex].value, pipeline[pipelineNodeIndex].version)
+				r.kMap.Set(pipeline[pipelineNodeIndex].Key, pipeline[pipelineNodeIndex].Value, pipeline[pipelineNodeIndex].Version)
 			}
 		}
 	}
