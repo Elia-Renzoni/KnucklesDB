@@ -301,14 +301,12 @@ func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer [
 			r.performLLW(r.versionVectorMessage.Pipeline)
 
 			// start a new gossip round
-			if r.versionVectorUtils.Order == vvector.HAPPENS_AFTER {
-				go func() {
-					fanoutList := r.clusterJoiner.SetFanoutList()
-					for nodeIndex := range fanoutList {
-						r.gossipConsensus.Send(fanoutList[nodeIndex], messageBuffer[:messageBufferLength])
-					}
-				}()
-			}
+			go func() {
+				fanoutList := r.clusterJoiner.SetFanoutList()
+				for nodeIndex := range fanoutList {
+					r.gossipConsensus.Send(fanoutList[nodeIndex], messageBuffer[:messageBufferLength])
+				}
+			}()
 		}
 	}
 }
