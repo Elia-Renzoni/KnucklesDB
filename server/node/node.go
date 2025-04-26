@@ -285,12 +285,8 @@ func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer [
 		// replica.
 		r.gossipConsensus.AddReplicaInTerminationMap(r.versionVectorMessage.ReplicaUUID, r.versionVectorMessage.LogicalClock)
 	} else {
-		// the same message has arrived
-		if clock == r.versionVectorMessage.LogicalClock {
-			// ignore the message
-			// just write an ACK message
-			conn.Write(ackMessage)
-		} else {
+		// new message from nodes
+		if clock != r.versionVectorMessage.LogicalClock {
 			// process the message
 			// and then forward the message
 			r.gossipConsensus.AddReplicaInTerminationMap(r.versionVectorMessage.ReplicaUUID, r.versionVectorMessage.LogicalClock)
@@ -308,6 +304,7 @@ func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer [
 				}
 			}()
 		}
+		conn.Write(ackMessage)
 	}
 }
 
