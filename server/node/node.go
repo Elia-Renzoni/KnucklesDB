@@ -278,25 +278,38 @@ func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer [
 	defer conn.Close()
 	// unmarshal the message received by peers via gossip.
 	json.Unmarshal(messageBuffer[:messageBufferLength], &r.versionVectorMessage)
-
-	// performing a LLW between the received pipeline of messages
-	r.gossipConsensus.PipelinedLLW(r.versionVectorMessage.Pipeline)
-
-	// perfoming a LLW between the received pipeline and the memory content.
-	r.performLLW(r.versionVectorMessage.Pipeline)
-
-	// write an ack
 	ackMessage, _ := r.swimMarshaler.MarshalAckMessage(1)
-	conn.Write(ackMessage)
 
-	// start a new gossip round
-	if r.versionVectorUtils.Order == vvector.HAPPENS_AFTER {
-		go func() {
-			fanoutList := r.clusterJoiner.SetFanoutList()
-			for nodeIndex := range fanoutList {
-				r.gossipConsensus.Send(fanoutList[nodeIndex], messageBuffer[:messageBufferLength])
+	if ok, clock := r.gossipConsensus.SearchReplica(r.versionVectorMessage.ReplicaUUID); !ok {
+		// if the replica is not present in the termination hash map is considered a new message from the
+		// replica.
+		r.gossipConsensus.AddReplicaInTerminationMap(r.versionVectorMessage.ReplicaUUID, r.versionVectorMessage.LogicalClock)
+	} else {
+		// the same message has arrived
+		if clock == r.versionVectorMessage.LogicalClock {
+			// ignore the message
+			// just write an ACK message
+			conn.Write(ackMessage)
+		} else {
+			// process the message
+			// and then forward the message
+			r.gossipConsensus.AddReplicaInTerminationMap(r.versionVectorMessage.ReplicaUUID, r.versionVectorMessage.LogicalClock)
+			// performing a LLW between the received pipeline of messages
+			r.gossipConsensus.PipelinedLLW(r.versionVectorMessage.Pipeline)
+
+			// perfoming a LLW between the received pipeline and the memory content.
+			r.performLLW(r.versionVectorMessage.Pipeline)
+
+			// start a new gossip round
+			if r.versionVectorUtils.Order == vvector.HAPPENS_AFTER {
+				go func() {
+					fanoutList := r.clusterJoiner.SetFanoutList()
+					for nodeIndex := range fanoutList {
+						r.gossipConsensus.Send(fanoutList[nodeIndex], messageBuffer[:messageBufferLength])
+					}
+				}()
 			}
-		}()
+		}
 	}
 }
 
