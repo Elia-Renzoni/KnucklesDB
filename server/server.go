@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	id "github.com/google/uuid"
 )
 
 func main() {
@@ -19,6 +21,7 @@ func main() {
 	timeoutDuration := 7 * time.Second
 	kHelperNodes := 2
 	routineSchedulingTime := 7 * time.Second
+	replicaUUID := id.New()
 
 	var wg sync.WaitGroup
 
@@ -30,7 +33,7 @@ func main() {
 	versionVectorMarshaler := vvector.NewVersionVectorMarshaler()
 
 	infectionBuffer := consensus.NewInfectionBuffer(versionVectorMarshaler, errorsLogger)
-	gossipAntiEntropy := consensus.NewGossip(infectionBuffer, timeoutDuration, infoLogger, errorsLogger)
+	gossipAntiEntropy := consensus.NewGossip(infectionBuffer, replicaUUID, timeoutDuration, infoLogger, errorsLogger)
 
 	versioningUtils := vvector.NewDataVersioning()
 
@@ -55,7 +58,7 @@ func main() {
 	updateQueue := store.NewSingularUpdateQueue(failureDetector)
 	recover := store.NewRecover(queueUpdateLogger, walLogger, infoLogger)
 	storeMap := store.NewKnucklesMap(bufferPool, addressBind, hashAlgorithm, updateQueue, recover)
-	replica := node.NewReplica(*host, *port, storeMap, timeoutDuration, marshaler, joiner, errorsLogger, infoLogger, spreader, gossipAntiEntropy, versioningUtils)
+	replica := node.NewReplica(*host, *port, replicaUUID, storeMap, timeoutDuration, marshaler, joiner, errorsLogger, infoLogger, spreader, gossipAntiEntropy, versioningUtils)
 
 	// start recovery session if needed
 	if full := walLogger.IsWALFull(); full {

@@ -46,12 +46,12 @@ type Message struct {
 	Value      []byte `json:"value,omitempty"`
 }
 
-func NewReplica(address string, port string, dbMap *store.KnucklesMap, timeout time.Duration,
+func NewReplica(address string, port string, uuid id.UUID, dbMap *store.KnucklesMap, timeout time.Duration,
 	marshaler *swim.ProtocolMarshaer, clusterData *swim.ClusterManager, errLogger *wal.ErrorsLogger,
 	infosLog *wal.InfoLogger, dissemination *swim.Dissemination, gossip *consensus.Gossip,
 	versionVector *vvector.DataVersioning) *Replica {
 	return &Replica{
-		replicaID:          id.New(),
+		replicaID:          uuid,
 		address:            address,
 		listenPort:         port,
 		kMap:               dbMap,
