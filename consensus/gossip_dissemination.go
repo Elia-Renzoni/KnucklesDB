@@ -17,28 +17,37 @@ import (
 	"knucklesdb/swim"
 	"knucklesdb/vvector"
 	"knucklesdb/wal"
+	"math"
 	"net"
 	"slices"
 	"time"
+
+	id "github.com/google/uuid"
 )
 
 type Gossip struct {
 	gossipConn      net.Conn
+	replicaUUID     id.UUID
 	infectionBuffer *InfectionBuffer
 	gossipContext   context.Context
 	gossipTimeout   time.Duration
 	ackMessage      swim.AckMessage
 	infoLogger      *wal.InfoLogger
 	errorLogger     *wal.ErrorsLogger
+	terminationMap  map[id.UUID]int
+	logicalClock    int
 }
 
-func NewGossip(buffer *InfectionBuffer, timeout time.Duration, logger *wal.InfoLogger, errorLogger *wal.ErrorsLogger) *Gossip {
+func NewGossip(buffer *InfectionBuffer, uuid id.UUID, timeout time.Duration, logger *wal.InfoLogger, errorLogger *wal.ErrorsLogger) *Gossip {
 	return &Gossip{
+		replicaUUID:     uuid,
 		infectionBuffer: buffer,
 		gossipContext:   context.Background(),
 		gossipTimeout:   timeout,
 		infoLogger:      logger,
 		errorLogger:     errorLogger,
+		terminationMap:  make(map[id.UUID]int),
+		logicalClock:    0,
 	}
 }
 
@@ -94,12 +103,33 @@ func (g *Gossip) MarshalPipeline(splittedBuffer []string) ([]byte, error) {
 		err               error
 	)
 
+	g.setLogicalClockForGossipSpreading()
+
 	marshaledPipeline, err = json.Marshal(map[string]any{
-		"type": "gossip",
-		"data": splittedBuffer,
+		"type":  "gossip",
+		"uuid":  g.replicaUUID,
+		"clock": g.logicalClock,
+		"data":  splittedBuffer,
 	})
 
 	return marshaledPipeline, err
+}
+
+func (g *Gossip) setLogicalClockForGossipSpreading() {
+	if (g.logicalClock + 1) < math.MaxInt {
+		g.logicalClock += 1
+	} else {
+		g.logicalClock = 1
+	}
+}
+
+func (g *Gossip) AddReplicaInTerminationMap(uuid id.UUID, clock int) {
+	g.terminationMap[uuid] = clock
+}
+
+func (g *Gossip) SearchReplica(uuid id.UUID) (bool, int) {
+	clock, ok := g.terminationMap[uuid]
+	return ok, clock
 }
 
 /*
