@@ -9,6 +9,8 @@ import (
 	"net"
 	"time"
 	"strconv"
+	_"fmt"
+	"sync"
 )
 
 const MAX_GOSSIP_ATTEMPS int = 3
@@ -28,12 +30,13 @@ type Dissemination struct {
 	cluster                   *Cluster
 	marshaler                 *ProtocolMarshaer
 	ack                       AckMessage
+	mutex  *sync.Mutex
 	gossipQuorum              int
 	gossipQuorumSpreadingList int
 }
 
 func NewDissemination(timeoutTime time.Duration, logger *wal.InfoLogger, errorLogger *wal.ErrorsLogger, cluster *Cluster,
-	marshaler *ProtocolMarshaer) *Dissemination {
+	marshaler *ProtocolMarshaer, mutex *sync.Mutex) *Dissemination {
 	return &Dissemination{
 		logger:              logger,
 		errorLogger:         errorLogger,
@@ -41,26 +44,24 @@ func NewDissemination(timeoutTime time.Duration, logger *wal.InfoLogger, errorLo
 		timeoutTime:         timeoutTime,
 		cluster:             cluster,
 		marshaler:           marshaler,
+		mutex: mutex,
 		gossipQuorum:        0,
 	}
 }
 
 func (d *Dissemination) SpreadMembershipList(membershipList []*Node, fanoutList []string) {
-	for attemp := 0; attemp < MAX_GOSSIP_ATTEMPS; attemp++ {
-		for index := range fanoutList {
-			encodeClusterMetadata, err := d.marshalMembershipList(membershipList)
-			d.errorLogger.ReportError(err)
-			d.send(fanoutList[index], encodeClusterMetadata, SPREAD_MEMBERSHIP)
-		}
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
 
-		// check if the majority quorum is reached.
-		if d.gossipQuorumSpreadingList >= (len(fanoutList)/2)+1 {
-			break
-		}
+	encodeClusterMetadata, err := d.marshalMembershipList(membershipList)
+	if err != nil {
+		d.errorLogger.ReportError(err)
+		return
 	}
 
-	// reset the qourum counter
-	d.gossipQuorumSpreadingList = 0
+	for index := range fanoutList {
+		d.send(fanoutList[index], encodeClusterMetadata, SPREAD_MEMBERSHIP)
+	}
 }
 
 func (d *Dissemination) TransformMembershipList(cluster MembershipListMessage) []*Node {
@@ -169,33 +170,31 @@ func (d *Dissemination) getDifferencies(receivedClusterMembers []*Node) ([]*Node
 }
 
 func (d *Dissemination) SpreadMembershipListUpdates(fanoutList []string, updateToSpread *Node) {
-	for i := 0; i < MAX_GOSSIP_ATTEMPS; i++ {
-		for index := range fanoutList {
-			encodedUpdate, _ := d.marshaler.MarshalSingleNodeUpdate(updateToSpread.nodeAddress, updateToSpread.nodeListenPort, updateToSpread.nodeStatus)
-			d.send(fanoutList[index], encodedUpdate, SPREAD_UPDATES)
-		}
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
 
-		// check if the majority quorum is reached.
-		if d.gossipQuorum >= (len(fanoutList)/2)+1 {
-			break
-		}
+	for index := range fanoutList {
+		encodedUpdate, _ := d.marshaler.MarshalSingleNodeUpdate(updateToSpread.nodeAddress, updateToSpread.nodeListenPort, updateToSpread.nodeStatus)
+		d.send(fanoutList[index], encodedUpdate, SPREAD_UPDATES)
 	}
-
-	// reset the quorum counter
-	d.gossipQuorum = 0
 }
 
 func (d *Dissemination) send(nodeAddress string, gossipMessage []byte, operation int) {
 	ctx, cancel := context.WithTimeout(d.gossipGlobalContext, d.timeoutTime)
 	defer cancel()
-	conn, err := net.Dial("tcp", nodeAddress)
+
+	var (
+		err error
+	)
+
+	d.conn, err = net.Dial("tcp", nodeAddress)
 	if err != nil {
 		d.errorLogger.ReportError(err)
 		return
 	}
-	defer conn.Close()
+	defer d.conn.Close()
 
-	conn.Write(gossipMessage)
+	d.conn.Write(gossipMessage)
 
 	data := make([]byte, 2024)
 
@@ -203,8 +202,11 @@ func (d *Dissemination) send(nodeAddress string, gossipMessage []byte, operation
 	case <-ctx.Done():
 		d.errorLogger.ReportError(errors.New("Gossip Send Failed due to Context Timeout"))
 	default:
-		count, _ := conn.Read(data)
+		count, _ := d.conn.Read(data)
 		json.Unmarshal(data[:count], &d.ack)
+
+		d.logger.ReportInfo("Ack Message Arrived from Neighbours")
+
 		switch operation {
 		case SPREAD_MEMBERSHIP:
 			switch d.ack.AckContent {

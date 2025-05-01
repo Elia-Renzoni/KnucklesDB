@@ -4,6 +4,7 @@ import (
 	"knucklesdb/swim"
 	"knucklesdb/wal"
 	"time"
+	"sync"
 )
 
 type AntiEntropy struct {
@@ -11,9 +12,10 @@ type AntiEntropy struct {
 	membershipList *swim.ClusterManager
 	infoLogger     *wal.InfoLogger
 	sleepTime      func(time.Duration)
+	mutex *sync.Mutex
 }
 
-func NewAntiEntropy(gProtocol *Gossip, clusterManager *swim.ClusterManager, logger *wal.InfoLogger) *AntiEntropy {
+func NewAntiEntropy(gProtocol *Gossip, clusterManager *swim.ClusterManager, logger *wal.InfoLogger, mutex *sync.Mutex) *AntiEntropy {
 	return &AntiEntropy{
 		gossipProtocol: gProtocol,
 		membershipList: clusterManager,
@@ -21,6 +23,7 @@ func NewAntiEntropy(gProtocol *Gossip, clusterManager *swim.ClusterManager, logg
 		sleepTime: func(frequency time.Duration) {
 			time.Sleep(frequency)
 		},
+		mutex: mutex,
 	}
 }
 
@@ -38,6 +41,8 @@ func (a *AntiEntropy) ScheduleAntiEntropy() {
 			continue
 		}
 
+		a.mutex.Lock()
+
 		// return the buffer containing the first five entries
 		encodedBufferToSend := a.gossipProtocol.PrepareBuffer()
 
@@ -49,5 +54,7 @@ func (a *AntiEntropy) ScheduleAntiEntropy() {
 		for _, nodeInfos := range clusterList {
 			a.gossipProtocol.Send(nodeInfos, message)
 		}
+
+		a.mutex.Unlock()
 	}
 }

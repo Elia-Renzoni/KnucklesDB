@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"knucklesdb/vvector"
 	"knucklesdb/wal"
-	"slices"
 	"sync"
 )
 
@@ -54,5 +53,6 @@ func (i *InfectionBuffer) DeleteEntriesFromSlice() {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
-	i.serializedEntriesToSpread = slices.Delete(i.serializedEntriesToSpread, 1, 5)
+
+	i.serializedEntriesToSpread.Truncate(5)
 }

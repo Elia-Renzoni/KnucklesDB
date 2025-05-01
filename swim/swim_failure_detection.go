@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+	"sync"
 )
 
 type SWIMFailureDetector struct {
@@ -50,11 +51,14 @@ type SWIMFailureDetector struct {
 	logger *wal.InfoLogger
 
 	errLogger *wal.ErrorsLogger
+
+	tcpMutex *sync.Mutex
+
 }
 
 func NewSWIMFailureDetector(manager *ClusterManager, cluster *Cluster, marshaler *ProtocolMarshaer, helperNodes int,
 	sleepTime, timeoutBoundaries time.Duration, logger *wal.InfoLogger, errLog *wal.ErrorsLogger,
-	gossip *Dissemination) *SWIMFailureDetector {
+	gossip *Dissemination, tcpMutex *sync.Mutex) *SWIMFailureDetector {
 	return &SWIMFailureDetector{
 		manager:      manager,
 		nodesList:    cluster,
@@ -65,6 +69,7 @@ func NewSWIMFailureDetector(manager *ClusterManager, cluster *Cluster, marshaler
 		gossip:       gossip,
 		logger:       logger,
 		errLogger:    errLog,
+		tcpMutex: tcpMutex,
 	}
 }
 
@@ -74,6 +79,8 @@ func NewSWIMFailureDetector(manager *ClusterManager, cluster *Cluster, marshaler
 *	@param listen port of the target node
  */
 func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
+	var faultDetected bool = false
+
 	joined := net.JoinHostPort(nodeHost, strconv.Itoa(nodeListenPort))
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, s.timeoutTime)
@@ -96,8 +103,6 @@ func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
 		}
 	}
 
-	defer conn.Close()
-
 	jsonValue, _ := s.marshaler.MarshalPing()
 	conn.Write(jsonValue)
 
@@ -108,16 +113,22 @@ func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
 	case <-ctx.Done():
 		s.changeNodeState(nodeHost, strconv.Itoa(nodeListenPort), STATUS_SUSPICIOUS)
 
-		// spread update in the cluster.
+		faultDetected = true
+		
+	default:
+		count, _ := conn.Read(replyData)
+		json.Unmarshal(replyData[:count], &s.swimMessageAck)
+	}
+
+	conn.Close()
+
+	if faultDetected {
 		go s.gossip.SpreadMembershipListUpdates(s.manager.SetFanoutList(), NewNode(nodeHost, nodeListenPort, STATUS_SUSPICIOUS))
 
 		s.logger.ReportInfo(fmt.Sprintf("%s - %s is SUSPICIOUS", nodeHost, strconv.Itoa(nodeListenPort)))
 		// TODO -> start a gossip cycle
 		go s.piggyBack(joined)
 		s.logger.ReportInfo("Sending Help Request to K Nodes")
-	default:
-		count, _ := conn.Read(replyData)
-		json.Unmarshal(replyData[:count], &s.swimMessageAck)
 	}
 }
 
@@ -128,6 +139,9 @@ func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
 *	@param target address and listen port
  */
 func (s *SWIMFailureDetector) piggyBack(targetInfo string) {
+	s.tcpMutex.Lock()
+	defer s.tcpMutex.Unlock()
+
 	if len(s.nodesList.clusterMetadata) < s.kHelperNodes {
 		s.errLogger.ReportError(errors.New("Not enough K elements"))
 	} else {
@@ -186,8 +200,8 @@ func (s *SWIMFailureDetector) pingPiggyBack() func(string, int, string) int {
 		defer cancel()
 
 		castedPort := strconv.Itoa(parentPort)
-		conn, err := net.Dial("tcp", net.JoinHostPort(parentIP, castedPort))
 
+		conn, err := net.Dial("tcp", net.JoinHostPort(parentIP, castedPort))
 		if err != nil {
 			s.errLogger.ReportError(err)
 			return 0
@@ -231,6 +245,8 @@ func (s *SWIMFailureDetector) ClusterFailureDetection() {
 	for {
 		time.Sleep(s.swimSchedule)
 
+		s.tcpMutex.Lock()
+
 		for _, node := range s.nodesList.clusterMetadata {
 			if node != nil {
 				if node.nodeStatus != STATUS_REMOVED {
@@ -239,5 +255,7 @@ func (s *SWIMFailureDetector) ClusterFailureDetection() {
 			}
 
 		}
+
+		s.tcpMutex.Unlock()
 	}
 }

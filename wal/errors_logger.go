@@ -8,6 +8,7 @@ package wal
 import (
 	"log"
 	"os"
+	"fmt"
 )
 
 type ErrorsLogger struct {
@@ -21,5 +22,6 @@ func NewErrorsLogger() *ErrorsLogger {
 }
 
 func (e *ErrorsLogger) ReportError(err error) {
+	fmt.Println(err)
 	e.errLogger.Println(err.Error())
 }

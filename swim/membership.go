@@ -15,6 +15,7 @@ import (
 	"slices"
 	"strconv"
 	"time"
+	"fmt"
 
 	"gopkg.in/yaml.v3"
 )
@@ -51,7 +52,7 @@ func (c *ClusterManager) JoinRequest(host, port string) {
 	seedInfo := c.getSeedNodeHostPort()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	// by using an infinite loop we create a stubbon link
+	// by using an infinite loop we create a stubborn link
 	for {
 		conn, err := net.Dial("tcp", seedInfo)
 		if err != nil {
@@ -109,7 +110,8 @@ func (c *ClusterManager) JoinCluster(address string, port int) {
 	c.cluster.clusterMetadata = append(c.cluster.clusterMetadata, n)
 
 	fanoutNodeList := c.SetFanoutList()
-	c.gossipSpreader.SpreadMembershipList(c.cluster.clusterMetadata, fanoutNodeList)
+	fmt.Println(fanoutNodeList)
+	go c.gossipSpreader.SpreadMembershipList(c.cluster.clusterMetadata, fanoutNodeList)
 }
 
 func (c *ClusterManager) DeleteNodeFromCluster(address, port string) {
@@ -162,10 +164,11 @@ func (c *ClusterManager) IsSeed(address string, port int) (bool, error) {
 }
 
 func (c *ClusterManager) SetFanout() (fanoutFactor int) {
-	if len(c.cluster.clusterMetadata) == 1 {
+
+	if len(c.cluster.clusterMetadata) <= 4 {
 		fanoutFactor = 1
 	} else {
-		fanoutFactor = len(c.cluster.clusterMetadata) / 4
+		fanoutFactor = 3
 	}
 
 	return
@@ -175,7 +178,7 @@ func (c *ClusterManager) SetFanoutList() []string {
 	var fanoutNodeList []string = make([]string, 0)
 
 	for i := 0; i < c.SetFanout(); i++ {
-		selectedNode := rand.Intn(c.SetFanout() + 1)
+		var selectedNode = rand.Intn(len(c.cluster.clusterMetadata))
 		port := strconv.Itoa(c.cluster.clusterMetadata[selectedNode].nodeListenPort)
 		fanoutNodeList = append(fanoutNodeList, net.JoinHostPort(c.cluster.clusterMetadata[selectedNode].nodeAddress, port))
 		for nodeIndex := range fanoutNodeList {

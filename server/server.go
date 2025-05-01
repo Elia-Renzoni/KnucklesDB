@@ -26,7 +26,10 @@ func main() {
 	var wg sync.WaitGroup
 
 	flag.Parse()
+	mutex := &sync.Mutex{}
 
+
+	
 	errorsLogger := wal.NewErrorsLogger()
 	infoLogger := wal.NewInfoLogger()
 
@@ -43,12 +46,12 @@ func main() {
 	cluster := swim.NewCluster()
 	marshaler := swim.NewProtocolMarshaler()
 
-	spreader := swim.NewDissemination(timeoutDuration, infoLogger, errorsLogger, cluster, marshaler)
+	spreader := swim.NewDissemination(timeoutDuration, infoLogger, errorsLogger, cluster, marshaler, mutex)
 	joiner := swim.NewClusterManager(cluster, errorsLogger, spreader)
 
-	antiEntropy := consensus.NewAntiEntropy(gossipAntiEntropy, joiner, infoLogger)
+	antiEntropy := consensus.NewAntiEntropy(gossipAntiEntropy, joiner, infoLogger, mutex)
 
-	swimFailureDetector := swim.NewSWIMFailureDetector(joiner, cluster, marshaler, kHelperNodes, routineSchedulingTime, timeoutDuration, infoLogger, errorsLogger, spreader)
+	swimFailureDetector := swim.NewSWIMFailureDetector(joiner, cluster, marshaler, kHelperNodes, routineSchedulingTime, timeoutDuration, infoLogger, errorsLogger, spreader, mutex)
 
 	bufferPool := store.NewBufferPool()
 	addressBind := store.NewAddressBinder()
@@ -58,7 +61,7 @@ func main() {
 	updateQueue := store.NewSingularUpdateQueue(failureDetector)
 	recover := store.NewRecover(queueUpdateLogger, walLogger, infoLogger)
 	storeMap := store.NewKnucklesMap(bufferPool, addressBind, hashAlgorithm, updateQueue, recover)
-	replica := node.NewReplica(*host, *port, replicaUUID, storeMap, timeoutDuration, marshaler, joiner, errorsLogger, infoLogger, spreader, gossipAntiEntropy, versioningUtils)
+	replica := node.NewReplica(*host, *port, replicaUUID, storeMap, timeoutDuration, marshaler, joiner, errorsLogger, infoLogger, spreader, gossipAntiEntropy, versioningUtils, mutex)
 
 	// start recovery session if needed
 	if full := walLogger.IsWALFull(); full {
@@ -73,10 +76,9 @@ func main() {
 
 	if !ok {
 		joiner.JoinRequest(*host, *port)
-	} else {
-		go swimFailureDetector.ClusterFailureDetection()
 	}
 
+	go swimFailureDetector.ClusterFailureDetection()
 	go failureDetector.ClockPageEviction()
 	go updateQueue.UpdateQueueReader()
 	go queueUpdateLogger.EntryReader()

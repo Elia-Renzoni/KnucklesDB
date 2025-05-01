@@ -11,6 +11,7 @@ import (
 	"net"
 	"strconv"
 	"time"
+	"sync"
 
 	id "github.com/google/uuid"
 )
@@ -30,6 +31,7 @@ type Replica struct {
 	swimGossip           *swim.Dissemination
 	gossipConsensus      *consensus.Gossip
 	versionVectorUtils   *vvector.DataVersioning
+	mutex *sync.Mutex
 }
 
 type SwimProtocolMessages struct {
@@ -49,7 +51,7 @@ type Message struct {
 func NewReplica(address string, port string, uuid id.UUID, dbMap *store.KnucklesMap, timeout time.Duration,
 	marshaler *swim.ProtocolMarshaer, clusterData *swim.ClusterManager, errLogger *wal.ErrorsLogger,
 	infosLog *wal.InfoLogger, dissemination *swim.Dissemination, gossip *consensus.Gossip,
-	versionVector *vvector.DataVersioning) *Replica {
+	versionVector *vvector.DataVersioning, mutex *sync.Mutex) *Replica {
 	return &Replica{
 		replicaID:          uuid,
 		address:            address,
@@ -63,6 +65,7 @@ func NewReplica(address string, port string, uuid id.UUID, dbMap *store.Knuckles
 		swimGossip:         dissemination,
 		gossipConsensus:    gossip,
 		versionVectorUtils: versionVector,
+		mutex: mutex,
 	}
 }
 
@@ -241,6 +244,8 @@ func (r *Replica) HandleSWIMMembershipList(conn net.Conn, buffer []byte, bufferL
 		return
 	}
 
+	r.infoLogger.ReportInfo("Broadcast MembershipList Arrived")
+
 	decodedMembershipList := r.swimGossip.TransformMembershipList(r.protocolMessages.SpreadedList)
 	if isDifferent := r.swimGossip.IsMembershipListDifferent(decodedMembershipList); isDifferent {
 		r.swimGossip.MergeMembershipList(decodedMembershipList)
@@ -256,6 +261,9 @@ func (r *Replica) HandleSWIMMembershipList(conn net.Conn, buffer []byte, bufferL
 }
 
 func (r *Replica) handleJoinMembershipMessage(conn net.Conn, buffer []byte, bufferLength int) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
 	r.infoLogger.ReportInfo("Join Message Arrived")
 
 	json.Unmarshal(buffer[:bufferLength], &r.protocolMessages.JoinRequest)
