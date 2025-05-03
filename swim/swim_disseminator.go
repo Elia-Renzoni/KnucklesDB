@@ -1,7 +1,6 @@
 package swim
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,6 +9,7 @@ import (
 	"time"
 	"strconv"
 	_"sync"
+	"fmt"
 )
 
 const MAX_GOSSIP_ATTEMPS int = 3
@@ -48,6 +48,7 @@ func NewDissemination(timeoutTime time.Duration, logger *wal.InfoLogger, errorLo
 
 func (d *Dissemination) SpreadMembershipList(membershipList []*Node, fanoutList []string) {
 	encodeClusterMetadata, err := d.marshalMembershipList(membershipList)
+	fmt.Println(string(encodeClusterMetadata))
 	if err != nil {
 		d.errorLogger.ReportError(err)
 		return
@@ -216,37 +217,25 @@ func (d *Dissemination) send(nodeAddress string, gossipMessage []byte, operation
 
 func (d *Dissemination) marshalMembershipList(clusterData []*Node) ([]byte, error) {
 	var (
-		encodedMembershipList bytes.Buffer
-		nodesObject           bytes.Buffer
-		entry, header, tail   []byte
+		entries = make([]MembershipEntry, 0)
 		err                   error
+		list []byte
+		clusterMessage MembershipListMessage
 	)
 
-	header, err = json.Marshal(map[string]string{
-		"type": "membership",
-	})
-	encodedMembershipList.Write(header)
 
-	for index := range clusterData {
-		entry, err = json.Marshal(map[string]any{
-			"address": clusterData[index].nodeAddress,
-			"port":    clusterData[index].nodeListenPort,
-			"status":  clusterData[index].nodeStatus,
-		})
-
-		if err != nil {
-			return nil, err
-		}
-
-		nodesObject.Write(entry)
-		nodesObject.WriteRune(RUNE_MEMBERSHIP_LIST_SEPARATOR)
+	for _, clusterNode := range clusterData {
+		port := strconv.Itoa(clusterNode.nodeListenPort)
+		n := MembershipEntry{NodeAddress: clusterNode.nodeAddress, NodeListenPort: port, NodeStatus: clusterNode.nodeStatus}
+		entries = append(entries, n)
 	}
 
-	tail, err = json.Marshal(map[string][]byte{
-		"list": nodesObject.Bytes(),
-	})
 
-	encodedMembershipList.Write(tail)
+	clusterMessage.MethodType = "membership"
+	clusterMessage.List = entries
 
-	return encodedMembershipList.Bytes(), err
+	list, err = json.Marshal(clusterMessage)
+
+
+	return list, err
 }

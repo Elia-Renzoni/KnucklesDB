@@ -4,6 +4,7 @@
 **/
 package swim
 
+
 type PiggyBackMessage struct {
 	MethodType string `json:"type"`
 	ParentNode string `json:"node"`
