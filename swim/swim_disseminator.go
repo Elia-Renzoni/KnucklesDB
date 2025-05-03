@@ -9,8 +9,7 @@ import (
 	"net"
 	"time"
 	"strconv"
-	_"fmt"
-	"sync"
+	_"sync"
 )
 
 const MAX_GOSSIP_ATTEMPS int = 3
@@ -30,13 +29,12 @@ type Dissemination struct {
 	cluster                   *Cluster
 	marshaler                 *ProtocolMarshaer
 	ack                       AckMessage
-	mutex  *sync.Mutex
 	gossipQuorum              int
 	gossipQuorumSpreadingList int
 }
 
 func NewDissemination(timeoutTime time.Duration, logger *wal.InfoLogger, errorLogger *wal.ErrorsLogger, cluster *Cluster,
-	marshaler *ProtocolMarshaer, mutex *sync.Mutex) *Dissemination {
+	marshaler *ProtocolMarshaer) *Dissemination {
 	return &Dissemination{
 		logger:              logger,
 		errorLogger:         errorLogger,
@@ -44,15 +42,11 @@ func NewDissemination(timeoutTime time.Duration, logger *wal.InfoLogger, errorLo
 		timeoutTime:         timeoutTime,
 		cluster:             cluster,
 		marshaler:           marshaler,
-		mutex: mutex,
 		gossipQuorum:        0,
 	}
 }
 
 func (d *Dissemination) SpreadMembershipList(membershipList []*Node, fanoutList []string) {
-	d.mutex.Lock()
-	defer d.mutex.Unlock()
-
 	encodeClusterMetadata, err := d.marshalMembershipList(membershipList)
 	if err != nil {
 		d.errorLogger.ReportError(err)
@@ -170,8 +164,6 @@ func (d *Dissemination) getDifferencies(receivedClusterMembers []*Node) ([]*Node
 }
 
 func (d *Dissemination) SpreadMembershipListUpdates(fanoutList []string, updateToSpread *Node) {
-	d.mutex.Lock()
-	defer d.mutex.Unlock()
 
 	for index := range fanoutList {
 		encodedUpdate, _ := d.marshaler.MarshalSingleNodeUpdate(updateToSpread.nodeAddress, updateToSpread.nodeListenPort, updateToSpread.nodeStatus)

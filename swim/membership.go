@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"time"
 	"fmt"
+	"sync"
 
 	"gopkg.in/yaml.v3"
 )
@@ -24,6 +25,7 @@ type ClusterManager struct {
 	// this field contains a list of nodes
 	// that have joined the cluster.
 	cluster        *Cluster
+	syncronizer    *sync.WaitGroup
 	marshaler      ProtocolMarshaer
 	logger         *wal.ErrorsLogger
 	gossipSpreader *Dissemination
@@ -34,9 +36,10 @@ type SeedNodeMetadata struct {
 	SeedNodeListenPort int    `yaml:"seed_listen_port"`
 }
 
-func NewClusterManager(cluster *Cluster, logger *wal.ErrorsLogger, gossipProtocol *Dissemination) *ClusterManager {
+func NewClusterManager(syncronizer *sync.WaitGroup, cluster *Cluster, logger *wal.ErrorsLogger, gossipProtocol *Dissemination) *ClusterManager {
 	return &ClusterManager{
 		cluster:        cluster,
+		syncronizer: syncronizer,
 		logger:         logger,
 		gossipSpreader: gossipProtocol,
 	}
@@ -48,6 +51,9 @@ func NewClusterManager(cluster *Cluster, logger *wal.ErrorsLogger, gossipProtoco
 *	@param listen port.
 **/
 func (c *ClusterManager) JoinRequest(host, port string) {
+	// wait for the listener
+	c.syncronizer.Wait()
+
 	var ackResult AckMessage
 	seedInfo := c.getSeedNodeHostPort()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

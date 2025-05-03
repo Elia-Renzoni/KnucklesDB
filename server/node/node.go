@@ -18,8 +18,7 @@ import (
 
 type Replica struct {
 	replicaID            id.UUID
-	address              string
-	listenPort           string
+	host, port string
 	kMap                 *store.KnucklesMap
 	protocolMessages     SwimProtocolMessages
 	versionVectorMessage consensus.PipelinedMessage
@@ -31,7 +30,7 @@ type Replica struct {
 	swimGossip           *swim.Dissemination
 	gossipConsensus      *consensus.Gossip
 	versionVectorUtils   *vvector.DataVersioning
-	mutex *sync.Mutex
+	syncronizer *sync.WaitGroup
 }
 
 type SwimProtocolMessages struct {
@@ -48,14 +47,14 @@ type Message struct {
 	Value      []byte `json:"value,omitempty"`
 }
 
-func NewReplica(address string, port string, uuid id.UUID, dbMap *store.KnucklesMap, timeout time.Duration,
+func NewReplica(host, port string, uuid id.UUID, dbMap *store.KnucklesMap, timeout time.Duration,
 	marshaler *swim.ProtocolMarshaer, clusterData *swim.ClusterManager, errLogger *wal.ErrorsLogger,
 	infosLog *wal.InfoLogger, dissemination *swim.Dissemination, gossip *consensus.Gossip,
-	versionVector *vvector.DataVersioning, mutex *sync.Mutex) *Replica {
+	versionVector *vvector.DataVersioning, syncronizer *sync.WaitGroup) *Replica {
 	return &Replica{
 		replicaID:          uuid,
-		address:            address,
-		listenPort:         port,
+		host: host,
+		port: port,
 		kMap:               dbMap,
 		timeoutTime:        timeout,
 		swimMarshaler:      marshaler,
@@ -65,18 +64,21 @@ func NewReplica(address string, port string, uuid id.UUID, dbMap *store.Knuckles
 		swimGossip:         dissemination,
 		gossipConsensus:    gossip,
 		versionVectorUtils: versionVector,
-		mutex: mutex,
+		syncronizer: syncronizer,
 	}
 }
 
 func (r *Replica) Start() {
-	ln, err := net.Listen("tcp", net.JoinHostPort(r.address, r.listenPort))
+	ln, err := net.Listen("tcp", net.JoinHostPort(r.host, r.port))
 	if err != nil {
 		r.logger.ReportError(err)
 	}
 
 	r.infoLogger.ReportInfo("Server Listening")
 
+	// make possibile the Join 
+	r.syncronizer.Done()
+	r.infoLogger.ReportInfo("Done!")
 	for {
 		conn, err := ln.Accept()
 
@@ -103,6 +105,7 @@ func (r *Replica) serveRequest(conn net.Conn) {
 	if err != nil {
 		r.logger.ReportError(err)
 	}
+
 
 	if err := json.Unmarshal(buffer[:n], msg); err != nil {
 		r.logger.ReportError(err)
@@ -261,9 +264,6 @@ func (r *Replica) HandleSWIMMembershipList(conn net.Conn, buffer []byte, bufferL
 }
 
 func (r *Replica) handleJoinMembershipMessage(conn net.Conn, buffer []byte, bufferLength int) {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
-
 	r.infoLogger.ReportInfo("Join Message Arrived")
 
 	json.Unmarshal(buffer[:bufferLength], &r.protocolMessages.JoinRequest)

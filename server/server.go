@@ -23,11 +23,13 @@ func main() {
 	routineSchedulingTime := 7 * time.Second
 	replicaUUID := id.New()
 
-	var wg sync.WaitGroup
+	var (
+		wg sync.WaitGroup
+		syncJoin = &sync.WaitGroup{}
+	)
 
+	syncJoin.Add(1)
 	flag.Parse()
-	mutex := &sync.Mutex{}
-
 
 	
 	errorsLogger := wal.NewErrorsLogger()
@@ -46,12 +48,12 @@ func main() {
 	cluster := swim.NewCluster()
 	marshaler := swim.NewProtocolMarshaler()
 
-	spreader := swim.NewDissemination(timeoutDuration, infoLogger, errorsLogger, cluster, marshaler, mutex)
-	joiner := swim.NewClusterManager(cluster, errorsLogger, spreader)
+	spreader := swim.NewDissemination(timeoutDuration, infoLogger, errorsLogger, cluster, marshaler)
+	joiner := swim.NewClusterManager(syncJoin, cluster, errorsLogger, spreader)
 
-	antiEntropy := consensus.NewAntiEntropy(gossipAntiEntropy, joiner, infoLogger, mutex)
+	antiEntropy := consensus.NewAntiEntropy(gossipAntiEntropy, joiner, infoLogger)
 
-	swimFailureDetector := swim.NewSWIMFailureDetector(joiner, cluster, marshaler, kHelperNodes, routineSchedulingTime, timeoutDuration, infoLogger, errorsLogger, spreader, mutex)
+	swimFailureDetector := swim.NewSWIMFailureDetector(joiner, cluster, marshaler, kHelperNodes, routineSchedulingTime, timeoutDuration, infoLogger, errorsLogger, spreader)
 
 	bufferPool := store.NewBufferPool()
 	addressBind := store.NewAddressBinder()
@@ -61,7 +63,7 @@ func main() {
 	updateQueue := store.NewSingularUpdateQueue(failureDetector)
 	recover := store.NewRecover(queueUpdateLogger, walLogger, infoLogger)
 	storeMap := store.NewKnucklesMap(bufferPool, addressBind, hashAlgorithm, updateQueue, recover)
-	replica := node.NewReplica(*host, *port, replicaUUID, storeMap, timeoutDuration, marshaler, joiner, errorsLogger, infoLogger, spreader, gossipAntiEntropy, versioningUtils, mutex)
+	replica := node.NewReplica(*host, *port, replicaUUID, storeMap, timeoutDuration, marshaler, joiner, errorsLogger, infoLogger, spreader, gossipAntiEntropy, versioningUtils, syncJoin)
 
 	// start recovery session if needed
 	if full := walLogger.IsWALFull(); full {
@@ -75,7 +77,7 @@ func main() {
 	}
 
 	if !ok {
-		joiner.JoinRequest(*host, *port)
+		go joiner.JoinRequest(*host, *port)
 	}
 
 	go swimFailureDetector.ClusterFailureDetection()

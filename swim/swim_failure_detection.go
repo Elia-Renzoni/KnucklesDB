@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"syscall"
 	"time"
-	"sync"
+	_"sync"
 )
 
 type SWIMFailureDetector struct {
@@ -52,13 +52,13 @@ type SWIMFailureDetector struct {
 
 	errLogger *wal.ErrorsLogger
 
-	tcpMutex *sync.Mutex
+	//tcpMutex *sync.Mutex
 
 }
 
 func NewSWIMFailureDetector(manager *ClusterManager, cluster *Cluster, marshaler *ProtocolMarshaer, helperNodes int,
 	sleepTime, timeoutBoundaries time.Duration, logger *wal.InfoLogger, errLog *wal.ErrorsLogger,
-	gossip *Dissemination, tcpMutex *sync.Mutex) *SWIMFailureDetector {
+	gossip *Dissemination) *SWIMFailureDetector {
 	return &SWIMFailureDetector{
 		manager:      manager,
 		nodesList:    cluster,
@@ -69,7 +69,6 @@ func NewSWIMFailureDetector(manager *ClusterManager, cluster *Cluster, marshaler
 		gossip:       gossip,
 		logger:       logger,
 		errLogger:    errLog,
-		tcpMutex: tcpMutex,
 	}
 }
 
@@ -139,8 +138,6 @@ func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
 *	@param target address and listen port
  */
 func (s *SWIMFailureDetector) piggyBack(targetInfo string) {
-	s.tcpMutex.Lock()
-	defer s.tcpMutex.Unlock()
 
 	if len(s.nodesList.clusterMetadata) < s.kHelperNodes {
 		s.errLogger.ReportError(errors.New("Not enough K elements"))
@@ -245,8 +242,6 @@ func (s *SWIMFailureDetector) ClusterFailureDetection() {
 	for {
 		time.Sleep(s.swimSchedule)
 
-		s.tcpMutex.Lock()
-
 		for _, node := range s.nodesList.clusterMetadata {
 			if node != nil {
 				if node.nodeStatus != STATUS_REMOVED {
@@ -255,7 +250,5 @@ func (s *SWIMFailureDetector) ClusterFailureDetection() {
 			}
 
 		}
-
-		s.tcpMutex.Unlock()
 	}
 }
