@@ -46,8 +46,8 @@ func NewDissemination(timeoutTime time.Duration, logger *wal.InfoLogger, errorLo
 	}
 }
 
-func (d *Dissemination) SpreadMembershipList(membershipList []*Node, fanoutList []string) {
-	encodeClusterMetadata, err := d.marshalMembershipList(membershipList)
+func (d *Dissemination) SpreadMembershipList(membershipList []*Node, fanoutList []string, seed bool) {
+	encodeClusterMetadata, err := d.marshalMembershipList(membershipList, seed)
 	fmt.Println(string(encodeClusterMetadata))
 	if err != nil {
 		d.errorLogger.ReportError(err)
@@ -133,13 +133,23 @@ func (d *Dissemination) MergeUpdates(update *Node) {
 			node.nodeStatus = update.nodeStatus
 		}
 	}
+
+
+	for _, node := range d.cluster.clusterMetadata {
+		fmt.Printf("%s - %d - %d \n", node.nodeAddress, node.nodeListenPort, node.nodeStatus)
+	}
 }
 
 func (d *Dissemination) getDifferencies(receivedClusterMembers []*Node) ([]*Node, int) {
 	var (
 		diffSlice []*Node = make([]*Node, 0)
-		different bool
+		different bool = true
 	)
+
+	for _, data := range receivedClusterMembers {
+		fmt.Printf("%s - %d - %d \n", data.nodeAddress, data.nodeListenPort, data.nodeStatus)
+	}
+
 
 	for _, receivedNode := range receivedClusterMembers {
 		for _, node := range d.cluster.clusterMetadata {
@@ -160,6 +170,9 @@ func (d *Dissemination) getDifferencies(receivedClusterMembers []*Node) ([]*Node
 			diffSlice = append(diffSlice, newNode)
 		}
 	}
+
+	fmt.Println(diffSlice)
+
 
 	return diffSlice, len(diffSlice)
 }
@@ -215,7 +228,7 @@ func (d *Dissemination) send(nodeAddress string, gossipMessage []byte, operation
 	}
 }
 
-func (d *Dissemination) marshalMembershipList(clusterData []*Node) ([]byte, error) {
+func (d *Dissemination) marshalMembershipList(clusterData []*Node, seed bool) ([]byte, error) {
 	var (
 		entries = make([]MembershipEntry, 0)
 		err                   error
@@ -230,11 +243,14 @@ func (d *Dissemination) marshalMembershipList(clusterData []*Node) ([]byte, erro
 		entries = append(entries, n)
 	}
 
-	entries = append(entries, MembershipEntry{
-		NodeAddress: "127.0.0.1",
-		NodeListenPort: "5050",
-		NodeStatus: 0,
-	})
+	if seed {
+		entries = append(entries, MembershipEntry{
+			NodeAddress: "127.0.0.1",
+			NodeListenPort: "5050",
+			NodeStatus: 0,
+		})
+	}
+	
 
 	clusterMessage.MethodType = "membership"
 	clusterMessage.List = entries

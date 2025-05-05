@@ -117,7 +117,7 @@ func (c *ClusterManager) JoinCluster(address string, port int) {
 
 	fanoutNodeList := c.SetFanoutList()
 	fmt.Println(fanoutNodeList)
-	go c.gossipSpreader.SpreadMembershipList(c.cluster.clusterMetadata, fanoutNodeList)
+	go c.gossipSpreader.SpreadMembershipList(c.cluster.clusterMetadata, fanoutNodeList, true)
 }
 
 func (c *ClusterManager) DeleteNodeFromCluster(address, port string) {

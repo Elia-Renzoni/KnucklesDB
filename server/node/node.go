@@ -227,6 +227,8 @@ func (r *Replica) HandleSWIMGossipMessage(conn net.Conn, buffer []byte, bufferLe
 		return
 	}
 
+	r.infoLogger.ReportInfo("SWIM Node Update Arrived via Gossip")
+
 	node := swim.NewNode(r.protocolMessages.NodeUpdate.NodeAddress, r.protocolMessages.NodeUpdate.NodeListenPort, r.protocolMessages.NodeUpdate.NodeStatus)
 	if different := r.swimGossip.IsUpdateDifferent(node); different {
 		r.swimGossip.MergeUpdates(node)
@@ -242,6 +244,8 @@ func (r *Replica) HandleSWIMGossipMessage(conn net.Conn, buffer []byte, bufferLe
 }
 
 func (r *Replica) HandleSWIMMembershipList(conn net.Conn, buffer []byte, bufferLength int) {
+	var seed bool = true
+
 	if err := json.Unmarshal(buffer[:bufferLength], &r.protocolMessages.SpreadedList); err != nil {
 		r.logger.ReportError(err)
 		return
@@ -253,7 +257,12 @@ func (r *Replica) HandleSWIMMembershipList(conn net.Conn, buffer []byte, bufferL
 	if isDifferent := r.swimGossip.IsMembershipListDifferent(decodedMembershipList); isDifferent {
 		r.swimGossip.MergeMembershipList(decodedMembershipList)
 		fanoutList := r.clusterJoiner.SetFanoutList()
-		go r.swimGossip.SpreadMembershipList(decodedMembershipList, fanoutList)
+		
+		if r.port != "5050" {
+			seed = false
+		}
+
+		go r.swimGossip.SpreadMembershipList(decodedMembershipList, fanoutList, seed)
 
 		jsonAck, _ := r.swimMarshaler.MarshalAckMessage(1)
 		conn.Write(jsonAck)
