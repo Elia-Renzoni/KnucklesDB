@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"time"
 	"sync"
+	"fmt"
 
 	id "github.com/google/uuid"
 )
@@ -244,7 +245,10 @@ func (r *Replica) HandleSWIMGossipMessage(conn net.Conn, buffer []byte, bufferLe
 }
 
 func (r *Replica) HandleSWIMMembershipList(conn net.Conn, buffer []byte, bufferLength int) {
-	var seed bool = true
+	var (
+		seed bool = true
+		fanoutList []string
+	)
 
 	if err := json.Unmarshal(buffer[:bufferLength], &r.protocolMessages.SpreadedList); err != nil {
 		r.logger.ReportError(err)
@@ -256,7 +260,15 @@ func (r *Replica) HandleSWIMMembershipList(conn net.Conn, buffer []byte, bufferL
 	decodedMembershipList := r.swimGossip.TransformMembershipList(r.protocolMessages.SpreadedList)
 	if isDifferent := r.swimGossip.IsMembershipListDifferent(decodedMembershipList); isDifferent {
 		r.swimGossip.MergeMembershipList(decodedMembershipList)
-		fanoutList := r.clusterJoiner.SetFanoutList()
+		fanoutList = r.clusterJoiner.SetFanoutList()
+		for r.checkFanoutList(conn.RemoteAddr(), fanoutList) {
+			fanoutList = r.clusterJoiner.SetFanoutList()
+		}
+
+		fmt.Println("Fanout List: ")
+		for _ , node := range fanoutList {
+			fmt.Println(node)
+		}
 		
 		if r.port != "5050" {
 			seed = false
@@ -270,6 +282,19 @@ func (r *Replica) HandleSWIMMembershipList(conn net.Conn, buffer []byte, bufferL
 		jsonAck, _ := r.swimMarshaler.MarshalAckMessage(0)
 		conn.Write(jsonAck)
 	}
+}
+
+func (r *Replica) checkFanoutList(remoteAddr net.Addr, calculatedAddrs []string) bool {
+	var result bool
+
+	for _, fanoutNode := range calculatedAddrs {
+		switch {
+		case remoteAddr.String() == fanoutNode, fanoutNode == net.JoinHostPort(r.host, r.port):
+			result = true
+		}
+	}
+
+	return result
 }
 
 func (r *Replica) handleJoinMembershipMessage(conn net.Conn, buffer []byte, bufferLength int) {
