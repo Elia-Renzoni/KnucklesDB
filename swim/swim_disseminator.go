@@ -230,12 +230,16 @@ func (d *Dissemination) marshalMembershipList(clusterData []*Node) ([]byte, erro
 		entries = append(entries, n)
 	}
 
+	entries = append(entries, MembershipEntry{
+		NodeAddress: "127.0.0.1",
+		NodeListenPort: "5050",
+		NodeStatus: 0,
+	})
 
 	clusterMessage.MethodType = "membership"
 	clusterMessage.List = entries
 
 	list, err = json.Marshal(clusterMessage)
-
 
 	return list, err
 }
