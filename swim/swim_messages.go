@@ -36,6 +36,7 @@ type JoinMessage struct {
 
 type MembershipListMessage struct {
 	MethodType string            `json:"type"`
+	SenderAddr string `json:"remote_addr"`
 	List       []MembershipEntry `json:"list"`
 }
 
@@ -47,6 +48,7 @@ type MembershipEntry struct {
 
 type SWIMUpdateMessage struct {
 	MethodType     string `json:"type"`
+	SenderAddr string `json:"remote_addr"`
 	NodeAddress    string `json:"node"`
 	NodeListenPort int `json:"port"`
 	NodeStatus     int `json:"changed"`

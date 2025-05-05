@@ -120,6 +120,25 @@ func (c *ClusterManager) JoinCluster(address string, port int) {
 	go c.gossipSpreader.SpreadMembershipList(c.cluster.clusterMetadata, fanoutNodeList, true)
 }
 
+func (c *ClusterManager) CheckIfFanoutIsPossible(senderAddr string, myAddr string) bool {
+	var (
+		result bool = false
+		counter int = 0
+	) 
+
+	for _, replica := range c.cluster.clusterMetadata {
+		if replica.nodeAddress == senderAddr || replica.nodeAddress == myAddr {
+			counter += 1
+		}
+	}
+
+	if counter < len(c.cluster.clusterMetadata) - 1 {
+		result = true
+	}
+
+	return result
+}
+
 func (c *ClusterManager) DeleteNodeFromCluster(address, port string) {
 	castedPort, _ := strconv.Atoi(port)
 	for index := range c.cluster.clusterMetadata {

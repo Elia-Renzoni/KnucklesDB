@@ -48,7 +48,7 @@ func main() {
 	cluster := swim.NewCluster()
 	marshaler := swim.NewProtocolMarshaler()
 
-	spreader := swim.NewDissemination(timeoutDuration, infoLogger, errorsLogger, cluster, marshaler)
+	spreader := swim.NewDissemination(*host, *port, timeoutDuration, infoLogger, errorsLogger, cluster, marshaler)
 	joiner := swim.NewClusterManager(syncJoin, cluster, errorsLogger, spreader)
 
 	antiEntropy := consensus.NewAntiEntropy(gossipAntiEntropy, joiner, infoLogger)

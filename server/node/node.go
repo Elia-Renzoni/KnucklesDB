@@ -260,21 +260,28 @@ func (r *Replica) HandleSWIMMembershipList(conn net.Conn, buffer []byte, bufferL
 	decodedMembershipList := r.swimGossip.TransformMembershipList(r.protocolMessages.SpreadedList)
 	if isDifferent := r.swimGossip.IsMembershipListDifferent(decodedMembershipList); isDifferent {
 		r.swimGossip.MergeMembershipList(decodedMembershipList)
-		fanoutList = r.clusterJoiner.SetFanoutList()
-		for r.checkFanoutList(conn.RemoteAddr(), fanoutList) {
+
+		fmt.Printf("Sender Address -----> %s \n", r.protocolMessages.SpreadedList.SenderAddr)
+		if result := r.clusterJoiner.CheckIfFanoutIsPossible(r.protocolMessages.SpreadedList.SenderAddr, net.JoinHostPort(r.host, r.port)); result {
+			r.infoLogger.ReportInfo("FANOUT possiible")
 			fanoutList = r.clusterJoiner.SetFanoutList()
-		}
+			for r.checkFanoutList(r.protocolMessages.SpreadedList.SenderAddr, fanoutList) {
+				fanoutList = r.clusterJoiner.SetFanoutList()
+			}
 
-		fmt.Println("Fanout List: ")
-		for _ , node := range fanoutList {
-			fmt.Println(node)
-		}
+			fmt.Println("Fanout List: ")
+			for _ , node := range fanoutList {
+				fmt.Printf("%s", node)
+			}
 		
-		if r.port != "5050" {
-			seed = false
-		}
+			if r.port != "5050" {
+				seed = false
+			}
 
-		go r.swimGossip.SpreadMembershipList(decodedMembershipList, fanoutList, seed)
+			go r.swimGossip.SpreadMembershipList(decodedMembershipList, fanoutList, seed)
+		} else {
+			r.infoLogger.ReportInfo("Non è possibile fare il FANOUT")
+		}
 
 		jsonAck, _ := r.swimMarshaler.MarshalAckMessage(1)
 		conn.Write(jsonAck)
@@ -284,12 +291,12 @@ func (r *Replica) HandleSWIMMembershipList(conn net.Conn, buffer []byte, bufferL
 	}
 }
 
-func (r *Replica) checkFanoutList(remoteAddr net.Addr, calculatedAddrs []string) bool {
+func (r *Replica) checkFanoutList(remoteAddr string, calculatedAddrs []string) bool {
 	var result bool
 
 	for _, fanoutNode := range calculatedAddrs {
 		switch {
-		case remoteAddr.String() == fanoutNode, fanoutNode == net.JoinHostPort(r.host, r.port):
+		case remoteAddr == fanoutNode, fanoutNode == net.JoinHostPort(r.host, r.port):
 			result = true
 		}
 	}

@@ -22,6 +22,7 @@ const (
 
 type Dissemination struct {
 	conn                      net.Conn
+	replicaHost, replicaPort string
 	logger                    *wal.InfoLogger
 	errorLogger               *wal.ErrorsLogger
 	gossipGlobalContext       context.Context
@@ -33,9 +34,11 @@ type Dissemination struct {
 	gossipQuorumSpreadingList int
 }
 
-func NewDissemination(timeoutTime time.Duration, logger *wal.InfoLogger, errorLogger *wal.ErrorsLogger, cluster *Cluster,
+func NewDissemination(host, port string, timeoutTime time.Duration, logger *wal.InfoLogger, errorLogger *wal.ErrorsLogger, cluster *Cluster,
 	marshaler *ProtocolMarshaer) *Dissemination {
 	return &Dissemination{
+		replicaHost: host,
+		replicaPort: port,
 		logger:              logger,
 		errorLogger:         errorLogger,
 		gossipGlobalContext: context.Background(),
@@ -122,6 +125,11 @@ func (d *Dissemination) MergeMembershipList(clusterMetadata []*Node) {
 			d.cluster.clusterMetadata = append(d.cluster.clusterMetadata, nodeToJoin)
 		}
 	}
+
+	fmt.Printf("Cluster...\n")
+	for _, node := range d.cluster.clusterMetadata {
+		fmt.Printf("%s - %d - %d \n", node.nodeAddress, node.nodeListenPort, node.nodeStatus)
+	}
 }
 
 func (d *Dissemination) MergeUpdates(update *Node) {
@@ -133,11 +141,6 @@ func (d *Dissemination) MergeUpdates(update *Node) {
 			node.nodeStatus = update.nodeStatus
 		}
 	}
-
-
-	for _, node := range d.cluster.clusterMetadata {
-		fmt.Printf("%s - %d - %d \n", node.nodeAddress, node.nodeListenPort, node.nodeStatus)
-	}
 }
 
 func (d *Dissemination) getDifferencies(receivedClusterMembers []*Node) ([]*Node, int) {
@@ -145,10 +148,6 @@ func (d *Dissemination) getDifferencies(receivedClusterMembers []*Node) ([]*Node
 		diffSlice []*Node = make([]*Node, 0)
 		different bool = true
 	)
-
-	for _, data := range receivedClusterMembers {
-		fmt.Printf("%s - %d - %d \n", data.nodeAddress, data.nodeListenPort, data.nodeStatus)
-	}
 
 
 	for _, receivedNode := range receivedClusterMembers {
@@ -180,7 +179,7 @@ func (d *Dissemination) getDifferencies(receivedClusterMembers []*Node) ([]*Node
 func (d *Dissemination) SpreadMembershipListUpdates(fanoutList []string, updateToSpread *Node) {
 
 	for index := range fanoutList {
-		encodedUpdate, _ := d.marshaler.MarshalSingleNodeUpdate(updateToSpread.nodeAddress, updateToSpread.nodeListenPort, updateToSpread.nodeStatus)
+		encodedUpdate, _ := d.marshaler.MarshalSingleNodeUpdate(updateToSpread.nodeAddress, updateToSpread.nodeListenPort, updateToSpread.nodeStatus, net.JoinHostPort(d.replicaHost, d.replicaPort))
 		d.send(fanoutList[index], encodedUpdate, SPREAD_UPDATES)
 	}
 }
@@ -253,6 +252,7 @@ func (d *Dissemination) marshalMembershipList(clusterData []*Node, seed bool) ([
 	
 
 	clusterMessage.MethodType = "membership"
+	clusterMessage.SenderAddr = net.JoinHostPort(d.replicaHost, d.replicaPort)
 	clusterMessage.List = entries
 
 	list, err = json.Marshal(clusterMessage)
