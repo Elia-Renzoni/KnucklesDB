@@ -111,9 +111,7 @@ func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
 	// timeout occured
 	case <-ctx.Done():
 		s.changeNodeState(nodeHost, strconv.Itoa(nodeListenPort), STATUS_SUSPICIOUS)
-
 		faultDetected = true
-		
 	default:
 		count, _ := conn.Read(replyData)
 		json.Unmarshal(replyData[:count], &s.swimMessageAck)
