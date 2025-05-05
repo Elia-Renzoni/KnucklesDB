@@ -5,6 +5,10 @@
 **/
 package store
 
+import (
+	"knucklesdb/consensus"
+)
+
 
 
 type KnucklesMap struct {
@@ -23,9 +27,12 @@ type KnucklesMap struct {
 	updateQueue *SingularUpdateQueue
 
 	walAPI *Recover
+
+	bufferToInfect *consensus.InfectionBuffer
 }
 
-func NewKnucklesMap(bPool *BufferPool, t *AddressBinder, h *SpookyHash, queue *SingularUpdateQueue, walAPI *Recover) *KnucklesMap {
+func NewKnucklesMap(bPool *BufferPool, t *AddressBinder, h *SpookyHash, queue *SingularUpdateQueue, walAPI *Recover,
+	                buffer *consensus.InfectionBuffer) *KnucklesMap {
 	return &KnucklesMap{
 		size:              0,
 		bufferPool:        bPool,
@@ -33,6 +40,7 @@ func NewKnucklesMap(bPool *BufferPool, t *AddressBinder, h *SpookyHash, queue *S
 		hasher:            h,
 		updateQueue: queue,
 		walAPI: walAPI,
+		bufferToInfect: buffer,
 	}
 }
 
@@ -54,6 +62,7 @@ func (k *KnucklesMap) Set(key []byte, value []byte, version int) {
 
 	// write the operation to the WAL to reach strong durability.
 	k.walAPI.SetOperationWAL(hash, key, value)
+	k.bufferToInfect.WriteInfection(consensus.NewEntry(key, value, int64(version)))
 }
 
 /**
