@@ -52,7 +52,7 @@ func (p *ProtocolMarshaer) MarshalSWIMDetectionMessage(nodeStatus, listenPort in
 	)
 
 	encodedSWIMMessage, err = json.Marshal(map[string]any{
-		"type":   "swim",
+		"type":   "swim-update",
 		"swim":   nodeStatus,
 		"nodeID": nodeID,
 		"port":   listenPort,

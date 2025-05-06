@@ -112,7 +112,7 @@ func (r *Replica) serveRequest(conn net.Conn) {
 		r.logger.ReportError(err)
 	} else {
 		switch msg.MethodType {
-		case "swim", "ping", "piggyback", "membership":
+		case "swim-update", "ping", "piggyback", "membership":
 			r.handleSWIMProtocolConnection(conn, buffer, msg.MethodType, n)
 		case "set", "get":
 			go r.handleConnection(conn, msg)
@@ -234,6 +234,7 @@ func (r *Replica) HandleSWIMGossipMessage(conn net.Conn, buffer []byte, bufferLe
 	if different := r.swimGossip.IsUpdateDifferent(node); different {
 		r.swimGossip.MergeUpdates(node)
 		fanoutList := r.clusterJoiner.SetFanoutList()
+		r.infoLogger.ReportInfo("SWIM FANOUT FOR SPREADING UPDATES")
 		go r.swimGossip.SpreadMembershipListUpdates(fanoutList, node)
 
 		jsonAck, _ := r.swimMarshaler.MarshalAckMessage(1)

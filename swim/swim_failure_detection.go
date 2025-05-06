@@ -51,9 +51,6 @@ type SWIMFailureDetector struct {
 	logger *wal.InfoLogger
 
 	errLogger *wal.ErrorsLogger
-
-	//tcpMutex *sync.Mutex
-
 }
 
 func NewSWIMFailureDetector(manager *ClusterManager, cluster *Cluster, marshaler *ProtocolMarshaer, helperNodes int,
@@ -120,7 +117,7 @@ func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
 	conn.Close()
 
 	if faultDetected {
-		go s.gossip.SpreadMembershipListUpdates(s.manager.SetFanoutList(), NewNode(nodeHost, nodeListenPort, STATUS_SUSPICIOUS))
+		s.gossip.SpreadMembershipListUpdates(s.manager.SetFanoutList(), NewNode(nodeHost, nodeListenPort, STATUS_SUSPICIOUS))
 
 		s.logger.ReportInfo(fmt.Sprintf("%s - %s is SUSPICIOUS", nodeHost, strconv.Itoa(nodeListenPort)))
 		// TODO -> start a gossip cycle
