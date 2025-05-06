@@ -91,7 +91,7 @@ func (g *Gossip) PrepareBuffer() []string {
 }
 
 func (g *Gossip) IsBufferEmpty() bool {
-	if g.infectionBuffer.serializedEntriesToSpread.Len() >= 5 {
+	if g.infectionBuffer.serializedEntriesToSpread.Len() >= 6 {
 		return true
 	}
 	return false
