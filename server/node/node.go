@@ -296,7 +296,7 @@ func (r *Replica) checkFanoutList(remoteAddr string, calculatedAddrs []string) b
 
 	for _, fanoutNode := range calculatedAddrs {
 		switch {
-		case remoteAddr == fanoutNode, fanoutNode == net.JoinHostPort(r.host, r.port):
+		case remoteAddr == fanoutNode, fanoutNode == net.JoinHostPort(r.host, r.port), fanoutNode == "127.0.0.1:5050":
 			result = true
 		}
 	}

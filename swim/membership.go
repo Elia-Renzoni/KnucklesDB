@@ -122,18 +122,23 @@ func (c *ClusterManager) JoinCluster(address string, port int) {
 
 func (c *ClusterManager) CheckIfFanoutIsPossible(senderAddr string, myAddr string) bool {
 	var (
-		result bool = false
+		result bool = true
 		counter int = 0
 	) 
 
 	for _, replica := range c.cluster.clusterMetadata {
-		if replica.nodeAddress == senderAddr || replica.nodeAddress == myAddr {
+		castedPort := strconv.Itoa(replica.nodeListenPort)
+		replicaJoinedAddr := net.JoinHostPort(replica.nodeAddress, castedPort)
+		if replicaJoinedAddr == senderAddr || replicaJoinedAddr == myAddr || replicaJoinedAddr == "127.0.0.1:5050"{
 			counter += 1
 		}
 	}
 
-	if counter < len(c.cluster.clusterMetadata) - 1 {
-		result = true
+	fmt.Println(counter)
+
+	fmt.Println(len(c.cluster.clusterMetadata))
+	if counter == len(c.cluster.clusterMetadata) {
+		result = false
 	}
 
 	return result
@@ -190,7 +195,7 @@ func (c *ClusterManager) IsSeed(address string, port int) (bool, error) {
 
 func (c *ClusterManager) SetFanout() (fanoutFactor int) {
 
-	if len(c.cluster.clusterMetadata) <= 4 {
+	if len(c.cluster.clusterMetadata) <= 7 {
 		fanoutFactor = 1
 	} else {
 		fanoutFactor = 3
@@ -202,14 +207,15 @@ func (c *ClusterManager) SetFanout() (fanoutFactor int) {
 func (c *ClusterManager) SetFanoutList() []string {
 	var fanoutNodeList []string = make([]string, 0)
 
-	for i := 0; i < c.SetFanout(); i++ {
+	for i := 0; i <= c.SetFanout() - 1; i++ {
 		var selectedNode = rand.Intn(len(c.cluster.clusterMetadata))
 		port := strconv.Itoa(c.cluster.clusterMetadata[selectedNode].nodeListenPort)
 		fanoutNodeList = append(fanoutNodeList, net.JoinHostPort(c.cluster.clusterMetadata[selectedNode].nodeAddress, port))
-		for nodeIndex := range fanoutNodeList {
-			if c.isRedundant(fanoutNodeList[nodeIndex], fanoutNodeList) {
-				fanoutNodeList = slices.Delete(fanoutNodeList, nodeIndex, nodeIndex+1)
-			}
+	}
+	
+	for nodeIndex := range fanoutNodeList {
+		if c.isRedundant(fanoutNodeList[nodeIndex], fanoutNodeList) {
+			fanoutNodeList = slices.Delete(fanoutNodeList, nodeIndex, nodeIndex+1)
 		}
 	}
 

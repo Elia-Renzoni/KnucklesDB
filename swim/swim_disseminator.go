@@ -73,30 +73,43 @@ func (d *Dissemination) TransformMembershipList(cluster MembershipListMessage) [
 		clusterNodes = append(clusterNodes, convertedNode)
 	}
 
+
+	fmt.Println("Lista di Nodi che mi arrivano!!!!")
+	for _, node := range clusterNodes {
+		fmt.Println("%s - %d - %d", node.nodeAddress, node.nodeListenPort, node.nodeStatus)
+	}
+
 	return clusterNodes
 }
 
 func (d *Dissemination) IsMembershipListDifferent(receivedMembershipList []*Node) bool {
 	var (
-		different bool = true
+		different bool = false
 	)
 
-	for remoteNodeIndex := range receivedMembershipList {
-		for localNodeIndex := range d.cluster.clusterMetadata {
-			switch {
-			case receivedMembershipList[remoteNodeIndex].nodeAddress != d.cluster.clusterMetadata[localNodeIndex].nodeAddress:
-				fallthrough
-			case receivedMembershipList[remoteNodeIndex].nodeListenPort != d.cluster.clusterMetadata[localNodeIndex].nodeListenPort:
-				fallthrough
-			case receivedMembershipList[remoteNodeIndex].nodeStatus != d.cluster.clusterMetadata[localNodeIndex].nodeStatus:
-				different = false
-			default:
-				different = true
-			}
+	for _, receivedReplica := range receivedMembershipList {
+		castedPort := strconv.Itoa(receivedReplica.nodeListenPort)
+		joined := net.JoinHostPort(receivedReplica.nodeAddress, castedPort)
+
+		if ok := d.compareReplica(joined); !ok {
+			different = true
+		}
+	}
+	
+	return different
+}
+
+func (d *Dissemination) compareReplica(receivedReplica string) bool {
+	for _, replicaInCluster := range d.cluster.clusterMetadata {
+		castedPort := strconv.Itoa(replicaInCluster.nodeListenPort)
+		joined := net.JoinHostPort(replicaInCluster.nodeAddress, castedPort)
+
+		if joined == receivedReplica {
+			return true
 		}
 	}
 
-	return different
+	return false
 }
 
 func (d *Dissemination) IsUpdateDifferent(update *Node) bool {
@@ -146,31 +159,16 @@ func (d *Dissemination) MergeUpdates(update *Node) {
 func (d *Dissemination) getDifferencies(receivedClusterMembers []*Node) ([]*Node, int) {
 	var (
 		diffSlice []*Node = make([]*Node, 0)
-		different bool = true
 	)
 
+	for _, receivedReplica := range receivedClusterMembers {
+		castedPort := strconv.Itoa(receivedReplica.nodeListenPort)
+		joinedAddr := net.JoinHostPort(receivedReplica.nodeAddress, castedPort)
 
-	for _, receivedNode := range receivedClusterMembers {
-		for _, node := range d.cluster.clusterMetadata {
-			switch {
-			case receivedNode.nodeAddress == node.nodeAddress:
-				fallthrough
-			case receivedNode.nodeListenPort == node.nodeListenPort:
-				fallthrough
-			case receivedNode.nodeStatus == node.nodeStatus:
-				different = false
-			default:
-				different = true
-			}
-		}
-
-		if different {
-			newNode := NewNode(receivedNode.nodeAddress, receivedNode.nodeListenPort, receivedNode.nodeStatus)
-			diffSlice = append(diffSlice, newNode)
-		}
+		if ok := d.compareReplica(joinedAddr); !ok {
+			diffSlice = append(diffSlice, receivedReplica)
+		} 
 	}
-
-	fmt.Println(diffSlice)
 
 
 	return diffSlice, len(diffSlice)
@@ -235,13 +233,6 @@ func (d *Dissemination) marshalMembershipList(clusterData []*Node, seed bool) ([
 		clusterMessage MembershipListMessage
 	)
 
-
-	for _, clusterNode := range clusterData {
-		port := strconv.Itoa(clusterNode.nodeListenPort)
-		n := MembershipEntry{NodeAddress: clusterNode.nodeAddress, NodeListenPort: port, NodeStatus: clusterNode.nodeStatus}
-		entries = append(entries, n)
-	}
-
 	if seed {
 		entries = append(entries, MembershipEntry{
 			NodeAddress: "127.0.0.1",
@@ -249,7 +240,13 @@ func (d *Dissemination) marshalMembershipList(clusterData []*Node, seed bool) ([
 			NodeStatus: 0,
 		})
 	}
-	
+
+
+	for _, clusterNode := range clusterData {
+		port := strconv.Itoa(clusterNode.nodeListenPort)
+		n := MembershipEntry{NodeAddress: clusterNode.nodeAddress, NodeListenPort: port, NodeStatus: clusterNode.nodeStatus}
+		entries = append(entries, n)
+	}
 
 	clusterMessage.MethodType = "membership"
 	clusterMessage.SenderAddr = net.JoinHostPort(d.replicaHost, d.replicaPort)
