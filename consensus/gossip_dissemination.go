@@ -80,10 +80,7 @@ func (g *Gossip) Send(address string, gossipMessage []byte) {
 func (g *Gossip) PrepareBuffer() []string {
 	var bufferContainingInfectionsToSend = make([]string, 0)
 
-	for i := 0; i < 5; i++ {
-		str, _ := g.infectionBuffer.serializedEntriesToSpread.ReadString(';')
-		bufferContainingInfectionsToSend = append(bufferContainingInfectionsToSend, str)
-	}
+	// TODO => handle string convertions
 
 	// delete the first five entries form the slice
 	g.infectionBuffer.DeleteEntriesFromSlice()

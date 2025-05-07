@@ -2,16 +2,17 @@ package consensus
 
 import (
 	"bytes"
+	"slices"
+	"sync"
 	"knucklesdb/vvector"
 	"knucklesdb/wal"
-	"sync"
 )
 
 type InfectionBuffer struct {
 	buffer                    chan Entry
-	serializedEntriesToSpread bytes.Buffer
+	serializedEntriesToSpread []Entry
+	lock sync.Mutex
 	versionVectorMarshaler    *vvector.VersionVectorMarshaler
-	lock                      sync.Mutex
 	errorlogger               *wal.ErrorsLogger
 }
 
@@ -31,7 +32,7 @@ func (i *InfectionBuffer) ReadInfectionToSpread() {
 	for {
 		select {
 		case entry := <-i.buffer:
-			encodedMessage, err := i.versionVectorMarshaler.MarshalVersionVectorMessage(entry.key, entry.value, entry.version)
+			//encodedMessage, err := i.versionVectorMarshaler.MarshalVersionVectorMessage(entry.key, entry.value, entry.version)
 			if err != nil {
 				i.errorlogger.ReportError(err)
 				return
@@ -41,18 +42,26 @@ func (i *InfectionBuffer) ReadInfectionToSpread() {
 	}
 }
 
-func (i *InfectionBuffer) addEntryToTheSlice(entry []byte) {
+func (i *InfectionBuffer) addEntryToTheSlice(entry Entry) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
-	i.serializedEntriesToSpread.Write(entry)
-	i.serializedEntriesToSpread.Write([]byte{';'})
+	i.serializedEntriesToSpread = append(i.serializedEntriesToSpread, entry)
 }
 
 func (i *InfectionBuffer) DeleteEntriesFromSlice() {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
+	for i := 0; i < 5; i++ {
+		i.serializedEntriesToSpread = slices.Delete(i.serializedEntriesToSpread, i, i + 1)
+	}
+}
 
-	i.serializedEntriesToSpread.Truncate(5)
+func (i *InfectionBuffer) GetFirstFiveEntries() []Entry {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
+
+	return i.serializedEntriesToSpread[:5]
 }
