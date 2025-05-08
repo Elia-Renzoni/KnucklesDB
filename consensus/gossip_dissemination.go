@@ -72,8 +72,6 @@ func (g *Gossip) Send(address string, gossipMessage []byte) {
 	default:
 		count, _ := conn.Read(data)
 		json.Unmarshal(data[:count], &g.ackMessage)
-
-		g.infoLogger.ReportInfo(fmt.Sprintf("Ack Message: %d", g.ackMessage.AckContent))
 	}
 }
 
