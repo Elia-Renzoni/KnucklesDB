@@ -62,7 +62,7 @@ func (k *KnucklesMap) Set(key []byte, value []byte, version int) {
 
 	// write the operation to the WAL to reach strong durability.
 	k.walAPI.SetOperationWAL(hash, key, value)
-	k.bufferToInfect.WriteInfection(consensus.NewEntry(key, value, int64(version)))
+	k.bufferToInfect.WriteInfection(consensus.NewEntry(key, value, version))
 }
 
 /**

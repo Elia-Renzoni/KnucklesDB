@@ -77,24 +77,22 @@ func (g *Gossip) Send(address string, gossipMessage []byte) {
 	}
 }
 
-func (g *Gossip) PrepareBuffer() []string {
-	var bufferContainingInfectionsToSend = make([]string, 0)
-
-	// TODO => handle string convertions
+func (g *Gossip) PrepareBuffer() []vvector.VersionVectorMessage {
+	entries :=  g.infectionBuffer.GetFirstFiveEntries()
 
 	// delete the first five entries form the slice
 	g.infectionBuffer.DeleteEntriesFromSlice()
-	return bufferContainingInfectionsToSend
+	return entries
 }
 
 func (g *Gossip) IsBufferEmpty() bool {
-	if g.infectionBuffer.serializedEntriesToSpread.Len() >= 6 {
+	if len(g.infectionBuffer.serializedEntriesToSpread) >= 5 {
 		return true
 	}
 	return false
 }
 
-func (g *Gossip) MarshalPipeline(splittedBuffer []string) ([]byte, error) {
+func (g *Gossip) MarshalPipeline(splittedBuffer []vvector.VersionVectorMessage) ([]byte, error) {
 	var (
 		marshaledPipeline []byte
 		err               error
@@ -102,11 +100,13 @@ func (g *Gossip) MarshalPipeline(splittedBuffer []string) ([]byte, error) {
 
 	g.setLogicalClockForGossipSpreading()
 
+	entriesToSpread, _ := json.Marshal(splittedBuffer)
+
 	marshaledPipeline, err = json.Marshal(map[string]any{
 		"type":  "gossip",
 		"uuid":  g.replicaUUID,
 		"clock": g.logicalClock,
-		"data":  splittedBuffer,
+		"data":  entriesToSpread,
 	})
 
 	return marshaledPipeline, err
