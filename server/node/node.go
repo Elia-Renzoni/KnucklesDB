@@ -326,6 +326,9 @@ func (r *Replica) handleJoinMembershipMessage(conn net.Conn, buffer []byte, buff
 
 func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer []byte, messageBufferLength int) {
 	defer conn.Close()
+
+	r.infoLogger.ReportInfo("Consensus Message Arrived")
+
 	// unmarshal the message received by peers via gossip.
 	json.Unmarshal(messageBuffer[:messageBufferLength], &r.versionVectorMessage)
 	ackMessage, _ := r.swimMarshaler.MarshalAckMessage(1)
@@ -334,6 +337,7 @@ func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer [
 		// if the replica is not present in the termination hash map is considered a new message from the
 		// replica.
 		r.gossipConsensus.AddReplicaInTerminationMap(r.versionVectorMessage.ReplicaUUID, r.versionVectorMessage.LogicalClock)
+		r.gossipConsensus.PipelinedLLW(r.versionVectorMessage.Pipeline)
 	} else {
 		// new message from nodes
 		if clock != r.versionVectorMessage.LogicalClock {

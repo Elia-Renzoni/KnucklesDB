@@ -99,6 +99,7 @@ func (g *Gossip) MarshalPipeline(splittedBuffer []vvector.VersionVectorMessage) 
 	g.setLogicalClockForGossipSpreading()
 
 	entriesToSpread, _ := json.Marshal(splittedBuffer)
+	fmt.Println(string(entriesToSpread))
 
 	marshaledPipeline, err = json.Marshal(map[string]any{
 		"type":  "gossip",

@@ -5,6 +5,7 @@ import (
 	"knucklesdb/wal"
 	"time"
 	_"sync"
+	"fmt"
 )
 
 type AntiEntropy struct {
@@ -39,10 +40,13 @@ func (a *AntiEntropy) ScheduleAntiEntropy() {
 			continue
 		}
 
+		a.infoLogger.ReportInfo("Able to Spread Informations")
+
 		// return the buffer containing the first five entries
 		encodedBufferToSend := a.gossipProtocol.PrepareBuffer()
 
 		message, _ := a.gossipProtocol.MarshalPipeline(encodedBufferToSend)
+		fmt.Println(string(message))
 
 		// send the pipeline containing the version to the chosen replicas
 		clusterList := a.membershipList.SetFanoutList()
