@@ -32,7 +32,6 @@ type Page struct {
 	// linked list
 	collisionList *CollisionBuffer
 
-
 	// mutual ex.
 	mutex sync.Mutex
 }
@@ -44,10 +43,10 @@ type Bucket struct {
 
 type CollisionBufferNode struct {
 	bucketNode Bucket
-	
+
 	// version vector that keeps track of the versions
 	nodeVersionVector int
-	next       *CollisionBufferNode
+	next              *CollisionBufferNode
 }
 
 // Buffer for the collisions that may occur
@@ -70,9 +69,9 @@ func newCollisionBuffer() *CollisionBuffer {
 
 func newCollisionBufferNode(bucket Bucket) *CollisionBufferNode {
 	return &CollisionBufferNode{
-		bucketNode: bucket,
+		bucketNode:        bucket,
 		nodeVersionVector: 0,
-		next:       nil,
+		next:              nil,
 	}
 }
 
@@ -95,17 +94,25 @@ func (p *Page) AddPage(key, value []byte, version int) {
 	// create the node
 	node = newCollisionBufferNode(b)
 
+	// check if the key-value pairs are already present in the in-memory data structure
 	cheatNode, ok := checkDuplicateKeys(p.collisionList.head, key)
 	if ok {
-		cheatNode.bucketNode.bucketData = b.bucketData
+		if checkValuesSimilarities(b.bucketData, cheatNode.next.bucketNode.bucketData) {
+			cheatNode.bucketNode.bucketData = b.bucketData
 
-		// if the parameter version is equal to 0 is time to increment
-		// the version, otherwise is equal to any non zero values i just
-		// update the version by overwriting it.
-		if version == INCREMENT_VERSION {
-			cheatNode.nodeVersionVector += 1
+			if version != INCREMENT_VERSION {
+				cheatNode.nodeVersionVector = version
+			}
 		} else {
-			cheatNode.nodeVersionVector = version
+			cheatNode.bucketNode.bucketData = b.bucketData
+			// if the parameter version is equal to 0 is time to increment
+			// the version, otherwise is equal to any non zero values i just
+			// update the version by overwriting it.
+			if version == INCREMENT_VERSION {
+				cheatNode.nodeVersionVector += 1
+			} else {
+				cheatNode.nodeVersionVector = version
+			}
 		}
 	} else {
 		if p.collisionList.head == nil {
@@ -217,4 +224,15 @@ func checkDuplicateKeys(head *CollisionBufferNode, key []byte) (*CollisionBuffer
 	}
 
 	return nil, false
+}
+
+func checkValuesSimilarities(newPage, oldPage [PAGE_SIZE]byte) bool {
+	_, newPageValue, _ := bytes.Cut(newPage[:], []byte("@"))
+	_, oldPageValue, _ := bytes.Cut(oldPage[:], []byte("@"))
+
+	if result := bytes.Compare(newPageValue, oldPageValue); result == 0 {
+		return true
+	}
+
+	return false
 }
