@@ -340,6 +340,7 @@ func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer [
 	} else {
 		// new message from nodes
 		if clock != r.versionVectorMessage.LogicalClock {
+			r.infoLogger.ReportInfo("New Message From Replica Arrived")
 			// process the message
 			// and then forward the message
 			r.gossipConsensus.AddReplicaInTerminationMap(r.versionVectorMessage.ReplicaUUID, r.versionVectorMessage.LogicalClock)
