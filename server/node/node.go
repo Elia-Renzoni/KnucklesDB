@@ -365,6 +365,7 @@ func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer [
 func (r *Replica) performLLW(pipeline []vvector.VersionVectorMessage) {
 	for pipelineNodeIndex := range pipeline {
 		err, _, inMemoryVersion := r.kMap.Get(pipeline[pipelineNodeIndex].Key)
+		r.infoLogger.ReportInfo("Trying to Perform an LLW")
 		if err != nil {
 			// the value is not in memory, we need to perform the first set
 			r.kMap.Set(pipeline[pipelineNodeIndex].Key, pipeline[pipelineNodeIndex].Value, pipeline[pipelineNodeIndex].Version)
