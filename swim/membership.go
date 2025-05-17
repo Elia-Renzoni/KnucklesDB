@@ -8,15 +8,15 @@ package swim
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"knucklesdb/wal"
 	"math/rand"
 	"net"
 	"os"
 	"slices"
 	"strconv"
-	"time"
-	"fmt"
 	"sync"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -39,7 +39,7 @@ type SeedNodeMetadata struct {
 func NewClusterManager(syncronizer *sync.WaitGroup, cluster *Cluster, logger *wal.ErrorsLogger, gossipProtocol *Dissemination) *ClusterManager {
 	return &ClusterManager{
 		cluster:        cluster,
-		syncronizer: syncronizer,
+		syncronizer:    syncronizer,
 		logger:         logger,
 		gossipSpreader: gossipProtocol,
 	}
@@ -122,14 +122,14 @@ func (c *ClusterManager) JoinCluster(address string, port int) {
 
 func (c *ClusterManager) CheckIfFanoutIsPossible(senderAddr string, myAddr string) bool {
 	var (
-		result bool = true
-		counter int = 0
-	) 
+		result  bool = true
+		counter int  = 0
+	)
 
 	for _, replica := range c.cluster.clusterMetadata {
 		castedPort := strconv.Itoa(replica.nodeListenPort)
 		replicaJoinedAddr := net.JoinHostPort(replica.nodeAddress, castedPort)
-		if replicaJoinedAddr == senderAddr || replicaJoinedAddr == myAddr || replicaJoinedAddr == "127.0.0.1:5050"{
+		if replicaJoinedAddr == senderAddr || replicaJoinedAddr == myAddr || replicaJoinedAddr == "127.0.0.1:5050" {
 			counter += 1
 		}
 	}
@@ -212,7 +212,7 @@ func (c *ClusterManager) SetFanoutList() []string {
 		port := strconv.Itoa(c.cluster.clusterMetadata[selectedNode].nodeListenPort)
 		fanoutNodeList = append(fanoutNodeList, net.JoinHostPort(c.cluster.clusterMetadata[selectedNode].nodeAddress, port))
 	}
-	
+
 	for indexNode := range fanoutNodeList {
 		if c.isRedundant(fanoutNodeList[indexNode], fanoutNodeList) {
 			fanoutNodeList = slices.Delete(fanoutNodeList, indexNode, indexNode)
@@ -235,5 +235,12 @@ func (c *ClusterManager) isRedundant(nodeToSearch string, fanoutNodeList []strin
 		return true
 	}
 
+	return false
+}
+
+func (c *ClusterManager) ClusterLen() bool {
+	if len(c.cluster.clusterMetadata) > 0 {
+		return true
+	}
 	return false
 }

@@ -1,11 +1,11 @@
 package consensus
 
 import (
+	"fmt"
 	"knucklesdb/swim"
 	"knucklesdb/wal"
+	_ "sync"
 	"time"
-	_"sync"
-	"fmt"
 )
 
 type AntiEntropy struct {
@@ -37,6 +37,11 @@ func (a *AntiEntropy) ScheduleAntiEntropy() {
 		// if the buffer is empty makes no sense to start a gossip
 		// cycle
 		if ok := a.gossipProtocol.IsBufferEmpty(); !ok {
+			continue
+		}
+
+		// if the cluster is empty don't spread updates
+		if !a.membershipList.ClusterLen() {
 			continue
 		}
 
