@@ -3,6 +3,7 @@ package node
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"knucklesdb/consensus"
 	"knucklesdb/store"
 	"knucklesdb/swim"
@@ -10,16 +11,15 @@ import (
 	"knucklesdb/wal"
 	"net"
 	"strconv"
-	"time"
 	"sync"
-	"fmt"
+	"time"
 
 	id "github.com/google/uuid"
 )
 
 type Replica struct {
 	replicaID            id.UUID
-	host, port string
+	host, port           string
 	kMap                 *store.KnucklesMap
 	protocolMessages     SwimProtocolMessages
 	versionVectorMessage consensus.PipelinedMessage
@@ -31,7 +31,7 @@ type Replica struct {
 	swimGossip           *swim.Dissemination
 	gossipConsensus      *consensus.Gossip
 	versionVectorUtils   *vvector.DataVersioning
-	syncronizer *sync.WaitGroup
+	syncronizer          *sync.WaitGroup
 }
 
 type SwimProtocolMessages struct {
@@ -54,8 +54,8 @@ func NewReplica(host, port string, uuid id.UUID, dbMap *store.KnucklesMap, timeo
 	versionVector *vvector.DataVersioning, syncronizer *sync.WaitGroup) *Replica {
 	return &Replica{
 		replicaID:          uuid,
-		host: host,
-		port: port,
+		host:               host,
+		port:               port,
 		kMap:               dbMap,
 		timeoutTime:        timeout,
 		swimMarshaler:      marshaler,
@@ -65,7 +65,7 @@ func NewReplica(host, port string, uuid id.UUID, dbMap *store.KnucklesMap, timeo
 		swimGossip:         dissemination,
 		gossipConsensus:    gossip,
 		versionVectorUtils: versionVector,
-		syncronizer: syncronizer,
+		syncronizer:        syncronizer,
 	}
 }
 
@@ -77,7 +77,7 @@ func (r *Replica) Start() {
 
 	r.infoLogger.ReportInfo("Server Listening")
 
-	// make possibile the Join 
+	// make possibile the Join
 	r.syncronizer.Done()
 	r.infoLogger.ReportInfo("Done!")
 	for {
@@ -106,7 +106,6 @@ func (r *Replica) serveRequest(conn net.Conn) {
 	if err != nil {
 		r.logger.ReportError(err)
 	}
-
 
 	if err := json.Unmarshal(buffer[:n], msg); err != nil {
 		r.logger.ReportError(err)
@@ -247,7 +246,7 @@ func (r *Replica) HandleSWIMGossipMessage(conn net.Conn, buffer []byte, bufferLe
 
 func (r *Replica) HandleSWIMMembershipList(conn net.Conn, buffer []byte, bufferLength int) {
 	var (
-		seed bool = true
+		seed       bool = true
 		fanoutList []string
 	)
 
@@ -271,10 +270,10 @@ func (r *Replica) HandleSWIMMembershipList(conn net.Conn, buffer []byte, bufferL
 			}
 
 			fmt.Println("Fanout List: ")
-			for _ , node := range fanoutList {
+			for _, node := range fanoutList {
 				fmt.Printf("%s", node)
 			}
-		
+
 			if r.port != "5050" {
 				seed = false
 			}
@@ -368,6 +367,7 @@ func (r *Replica) performLLW(pipeline []vvector.VersionVectorMessage) {
 		if err != nil {
 			// the value is not in memory, we need to perform the first set
 			r.kMap.Set(pipeline[pipelineNodeIndex].Key, pipeline[pipelineNodeIndex].Value, pipeline[pipelineNodeIndex].Version)
+			r.infoLogger.ReportInfo("Added a New Entry in Memory")
 		} else {
 			// if the value is already in the buffer pool we need to confront the
 			// versions to get a correct LLW.
