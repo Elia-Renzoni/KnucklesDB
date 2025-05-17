@@ -339,7 +339,7 @@ func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer [
 		r.gossipConsensus.PipelinedLLW(r.versionVectorMessage.Pipeline)
 	} else {
 		// new message from nodes
-		if clock != r.versionVectorMessage.LogicalClock {
+		if clock < r.versionVectorMessage.LogicalClock {
 			r.infoLogger.ReportInfo("New Message From Replica Arrived")
 			// process the message
 			// and then forward the message
