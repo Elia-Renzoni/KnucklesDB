@@ -371,6 +371,7 @@ func (r *Replica) performLLW(pipeline []vvector.VersionVectorMessage) {
 		} else {
 			// if the value is already in the buffer pool we need to confront the
 			// versions to get a correct LLW.
+			r.infoLogger.ReportInfo("Update Entry Already Present in the Systems")
 			r.versionVectorUtils.CompareAndUpdateVersions(pipeline[pipelineNodeIndex], inMemoryVersion)
 			switch r.versionVectorUtils.Order {
 			case vvector.HAPPENS_AFTER:
