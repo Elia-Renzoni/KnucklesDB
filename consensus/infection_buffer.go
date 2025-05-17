@@ -1,16 +1,16 @@
 package consensus
 
 import (
-	"slices"
-	"sync"
 	"knucklesdb/vvector"
 	"knucklesdb/wal"
+	"slices"
+	"sync"
 )
 
 type InfectionBuffer struct {
 	buffer                    chan Entry
 	serializedEntriesToSpread []vvector.VersionVectorMessage
-	lock sync.Mutex
+	lock                      sync.Mutex
 	versionVectorMarshaler    *vvector.VersionVectorMarshaler
 	errorlogger               *wal.ErrorsLogger
 }
@@ -41,8 +41,8 @@ func (i *InfectionBuffer) addEntryToTheSlice(entry Entry) {
 	defer i.lock.Unlock()
 
 	entryVersion := vvector.VersionVectorMessage{
-		Key: entry.key,
-		Value: entry.value,
+		Key:     entry.key,
+		Value:   entry.value,
 		Version: entry.version,
 	}
 
@@ -53,15 +53,22 @@ func (i *InfectionBuffer) DeleteEntriesFromSlice() {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
-	for j := 0; j < 5; j++ {
-		i.serializedEntriesToSpread = slices.Delete(i.serializedEntriesToSpread, j, j + 1)
+	for j := 0; j < i.getNIteraction(); j++ {
+		i.serializedEntriesToSpread = slices.Delete(i.serializedEntriesToSpread, j, j+1)
 	}
+}
+
+func (i *InfectionBuffer) getNIteraction() int {
+	if len(i.serializedEntriesToSpread) >= 5 {
+		return 5
+	}
+
+	return len(i.serializedEntriesToSpread)
 }
 
 func (i *InfectionBuffer) GetFirstFiveEntries() []vvector.VersionVectorMessage {
 	i.lock.Lock()
 	defer i.lock.Unlock()
-
 
 	return i.serializedEntriesToSpread[:5]
 }
