@@ -97,7 +97,7 @@ func (p *Page) AddPage(key, value []byte, version int) {
 	// check if the key-value pairs are already present in the in-memory data structure
 	cheatNode, ok := checkDuplicateKeys(p.collisionList.head, key)
 	if ok {
-		if checkValuesSimilarities(b.bucketData, cheatNode.next.bucketNode.bucketData) {
+		if checkValuesSimilarities(b.bucketData, cheatNode.bucketNode.bucketData) {
 			cheatNode.bucketNode.bucketData = b.bucketData
 
 			if version != INCREMENT_VERSION {
