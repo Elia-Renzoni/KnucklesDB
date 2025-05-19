@@ -37,7 +37,7 @@ func main() {
 			return
 		}
 
-		conn, err := net.Dial("tcp", "127.0.0.1:6060")
+		conn, err := net.Dial("tcp", "127.0.0.1:6062")
 		if err != nil {
 			return
 		}
