@@ -329,7 +329,13 @@ func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer [
 	r.infoLogger.ReportInfo("Consensus Message Arrived")
 
 	// unmarshal the message received by peers via gossip.
-	json.Unmarshal(messageBuffer[:messageBufferLength], &r.versionVectorMessage)
+	if err := json.Unmarshal(messageBuffer[:messageBufferLength], &r.versionVectorMessage); err != nil {
+		r.logger.ReportError(err)
+	}
+
+	fmt.Println(r.versionVectorMessage.LogicalClock)
+	fmt.Println(r.versionVectorMessage.MessageType)
+	fmt.Println(r.versionVectorMessage.ReplicaUUID)
 	ackMessage, _ := r.swimMarshaler.MarshalAckMessage(1)
 
 	if ok, clock := r.gossipConsensus.SearchReplica(r.versionVectorMessage.ReplicaUUID); !ok {
@@ -337,6 +343,7 @@ func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer [
 		// replica.
 		r.gossipConsensus.AddReplicaInTerminationMap(r.versionVectorMessage.ReplicaUUID, r.versionVectorMessage.LogicalClock)
 		r.gossipConsensus.PipelinedLLW(r.versionVectorMessage.Pipeline)
+		r.performLLW(r.versionVectorMessage.Pipeline)
 	} else {
 		// new message from nodes
 		if clock < r.versionVectorMessage.LogicalClock {
@@ -363,6 +370,7 @@ func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer [
 }
 
 func (r *Replica) performLLW(pipeline []vvector.VersionVectorMessage) {
+	fmt.Printf("Lunghezza Pipeline: %d", len(pipeline))
 	for pipelineNodeIndex := range pipeline {
 		err, _, inMemoryVersion := r.kMap.Get(pipeline[pipelineNodeIndex].Key)
 		r.infoLogger.ReportInfo("Trying to Perform an LLW")
