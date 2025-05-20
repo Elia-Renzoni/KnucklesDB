@@ -27,6 +27,7 @@ import (
 
 type Gossip struct {
 	gossipConn      net.Conn
+	replicaHost, replicaPort string
 	replicaUUID     id.UUID
 	infectionBuffer *InfectionBuffer
 	gossipContext   context.Context
@@ -38,8 +39,10 @@ type Gossip struct {
 	logicalClock    int
 }
 
-func NewGossip(buffer *InfectionBuffer, uuid id.UUID, timeout time.Duration, logger *wal.InfoLogger, errorLogger *wal.ErrorsLogger) *Gossip {
+func NewGossip(replicaHost, replicaPort string, buffer *InfectionBuffer, uuid id.UUID, timeout time.Duration, logger *wal.InfoLogger, errorLogger *wal.ErrorsLogger) *Gossip {
 	return &Gossip{
+		replicaHost: replicaHost,
+		replicaPort: replicaPort,	
 		replicaUUID:     uuid,
 		infectionBuffer: buffer,
 		gossipContext:   context.Background(),
@@ -103,6 +106,7 @@ func (g *Gossip) MarshalPipeline(splittedBuffer []vvector.VersionVectorMessage) 
 
 	marshaledPipeline, err = json.Marshal(map[string]any{
 		"type":  "gossip",
+		"remote_addr": net.JoinHostPort(g.replicaHost, g.replicaPort),
 		"uuid":  g.replicaUUID,
 		"clock": g.logicalClock,
 		"data":  splittedBuffer,

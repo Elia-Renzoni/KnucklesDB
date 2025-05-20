@@ -38,7 +38,7 @@ func main() {
 	versionVectorMarshaler := vvector.NewVersionVectorMarshaler()
 
 	infectionBuffer := consensus.NewInfectionBuffer(versionVectorMarshaler, errorsLogger)
-	gossipAntiEntropy := consensus.NewGossip(infectionBuffer, replicaUUID, timeoutDuration, infoLogger, errorsLogger)
+	gossipAntiEntropy := consensus.NewGossip(*host, *port, infectionBuffer, replicaUUID, timeoutDuration, infoLogger, errorsLogger)
 
 	versioningUtils := vvector.NewDataVersioning()
 

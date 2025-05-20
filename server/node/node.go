@@ -356,6 +356,8 @@ func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer [
 
 			// start a new gossip round
 			go func() {
+				var fanoutList []string
+
 				_, cancel := context.WithCancel(context.Background())
 				defer cancel()
 
@@ -363,9 +365,11 @@ func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer [
 					return
 				}
 
-				// TODO => check fanoutlist.
+				fanoutList = r.clusterJoiner.SetFanoutList()
+				for r.checkFanoutList(r.versionVectorMessage.RemoteAddr, fanoutList) {
+					fanoutList = r.clusterJoiner.SetFanoutList()
+				}
 
-				fanoutList := r.clusterJoiner.SetFanoutList()
 				for nodeIndex := range fanoutList {
 					r.gossipConsensus.Send(fanoutList[nodeIndex], messageBuffer[:messageBufferLength])
 				}
