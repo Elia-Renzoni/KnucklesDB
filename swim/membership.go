@@ -25,6 +25,7 @@ type ClusterManager struct {
 	// this field contains a list of nodes
 	// that have joined the cluster.
 	cluster        *Cluster
+	seedInfo string
 	syncronizer    *sync.WaitGroup
 	marshaler      ProtocolMarshaer
 	logger         *wal.ErrorsLogger
@@ -55,12 +56,12 @@ func (c *ClusterManager) JoinRequest(host, port string) {
 	c.syncronizer.Wait()
 
 	var ackResult AckMessage
-	seedInfo := c.getSeedNodeHostPort()
+	c.seedInfo = c.getSeedNodeHostPort()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	// by using an infinite loop we create a stubborn link
 	for {
-		conn, err := net.Dial("tcp", seedInfo)
+		conn, err := net.Dial("tcp", c.seedInfo)
 		if err != nil {
 			c.logger.ReportError(err)
 		}
@@ -243,4 +244,13 @@ func (c *ClusterManager) ClusterLen() bool {
 		return true
 	}
 	return false
+}
+
+func (c *ClusterManager) GetClusterLen() int {
+	return len(c.cluster.clusterMetadata)
+} 
+
+
+func (c *ClusterManager) GetSeedNodeInfos() string {
+	return c.seedInfo
 }

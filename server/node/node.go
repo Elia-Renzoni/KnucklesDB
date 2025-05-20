@@ -333,9 +333,6 @@ func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer [
 		r.logger.ReportError(err)
 	}
 
-	fmt.Println(r.versionVectorMessage.LogicalClock)
-	fmt.Println(r.versionVectorMessage.MessageType)
-	fmt.Println(r.versionVectorMessage.ReplicaUUID)
 	ackMessage, _ := r.swimMarshaler.MarshalAckMessage(1)
 
 	if ok, clock := r.gossipConsensus.SearchReplica(r.versionVectorMessage.ReplicaUUID); !ok {
@@ -359,11 +356,24 @@ func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer [
 
 			// start a new gossip round
 			go func() {
+				_, cancel := context.WithCancel(context.Background())
+				defer cancel()
+
+				if r.clusterJoiner.GetClusterLen() == 2 {
+					cancel()
+				}
+
+
+				// TODO => check fanoutlist.
+
 				fanoutList := r.clusterJoiner.SetFanoutList()
 				for nodeIndex := range fanoutList {
 					r.gossipConsensus.Send(fanoutList[nodeIndex], messageBuffer[:messageBufferLength])
 				}
 			}()
+
+		} else {
+			r.infoLogger.ReportInfo("Ignoring Message from Replica")
 		}
 		conn.Write(ackMessage)
 	}

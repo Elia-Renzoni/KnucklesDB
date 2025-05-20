@@ -51,7 +51,7 @@ func main() {
 	spreader := swim.NewDissemination(*host, *port, timeoutDuration, infoLogger, errorsLogger, cluster, marshaler)
 	joiner := swim.NewClusterManager(syncJoin, cluster, errorsLogger, spreader)
 
-	antiEntropy := consensus.NewAntiEntropy(gossipAntiEntropy, joiner, infoLogger)
+	antiEntropy := consensus.NewAntiEntropy(*host, *port, gossipAntiEntropy, joiner, infoLogger)
 
 	swimFailureDetector := swim.NewSWIMFailureDetector(joiner, cluster, marshaler, kHelperNodes, routineSchedulingTime, timeoutDuration, infoLogger, errorsLogger, spreader)
 
