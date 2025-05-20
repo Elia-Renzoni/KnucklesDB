@@ -49,8 +49,11 @@ func (a *AntiEntropy) ScheduleAntiEntropy() {
 			continue
 		}
 
-		if a.membershipList.GetClusterLen() == 2 && net.JoinHostPort(a.replicaHost, a.replicaPort) != a.membershipList.GetSeedNodeInfos() {
-			continue
+		fmt.Printf("Cluster Len ----> %d", a.membershipList.GetClusterLen())
+		if a.membershipList.GetClusterLen() == 2 {
+			if net.JoinHostPort(a.replicaHost, a.replicaPort) != a.membershipList.GetSeedNodeInfos() {
+				continue
+			}
 		}
 
 		a.infoLogger.ReportInfo("Able to Spread Informations")

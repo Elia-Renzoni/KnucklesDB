@@ -360,9 +360,8 @@ func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer [
 				defer cancel()
 
 				if r.clusterJoiner.GetClusterLen() == 2 {
-					cancel()
+					return
 				}
-
 
 				// TODO => check fanoutlist.
 
@@ -371,7 +370,6 @@ func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer [
 					r.gossipConsensus.Send(fanoutList[nodeIndex], messageBuffer[:messageBufferLength])
 				}
 			}()
-
 		} else {
 			r.infoLogger.ReportInfo("Ignoring Message from Replica")
 		}
