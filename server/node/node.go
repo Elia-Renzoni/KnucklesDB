@@ -139,7 +139,7 @@ func (r *Replica) handleConnection(conn net.Conn, message *Message) {
 
 	switch message.MethodType {
 	case "set":
-		r.kMap.Set(message.Key, message.Value, 0)
+		r.kMap.Set(message.Key, message.Value, 0, true)
 		responsePayload, _ = json.Marshal(map[string]string{
 			"ack": "1",
 		})
@@ -333,6 +333,9 @@ func (r *Replica) handleConsensusAgreementMessage(conn net.Conn, messageBuffer [
 		r.logger.ReportError(err)
 	}
 
+
+	r.infoLogger.ReportInfo(r.versionVectorMessage.RemoteAddr)
+
 	ackMessage, _ := r.swimMarshaler.MarshalAckMessage(1)
 
 	if ok, clock := r.gossipConsensus.SearchReplica(r.versionVectorMessage.ReplicaUUID); !ok {
@@ -388,7 +391,7 @@ func (r *Replica) performLLW(pipeline []vvector.VersionVectorMessage) {
 		r.infoLogger.ReportInfo("Trying to Perform an LLW")
 		if err != nil {
 			// the value is not in memory, we need to perform the first set
-			r.kMap.Set(pipeline[pipelineNodeIndex].Key, pipeline[pipelineNodeIndex].Value, pipeline[pipelineNodeIndex].Version)
+			r.kMap.Set(pipeline[pipelineNodeIndex].Key, pipeline[pipelineNodeIndex].Value, pipeline[pipelineNodeIndex].Version, false)
 			r.infoLogger.ReportInfo("Added a New Entry in Memory")
 		} else {
 			// if the value is already in the buffer pool we need to confront the
@@ -399,7 +402,7 @@ func (r *Replica) performLLW(pipeline []vvector.VersionVectorMessage) {
 			case vvector.HAPPENS_AFTER:
 				// if the received version is greater then update the memorized version
 				// otherwise the memorized version is more updated.
-				r.kMap.Set(pipeline[pipelineNodeIndex].Key, pipeline[pipelineNodeIndex].Value, pipeline[pipelineNodeIndex].Version)
+				r.kMap.Set(pipeline[pipelineNodeIndex].Key, pipeline[pipelineNodeIndex].Value, pipeline[pipelineNodeIndex].Version, false)
 			}
 		}
 	}

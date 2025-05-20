@@ -49,7 +49,7 @@ func NewKnucklesMap(bPool *BufferPool, t *AddressBinder, h *SpookyHash, queue *S
 *	@param key
 *   @param value
 **/
-func (k *KnucklesMap) Set(key []byte, value []byte, version int) {
+func (k *KnucklesMap) Set(key []byte, value []byte, version int, infectionFlag bool) {
 	var (
 		hash   uint32
 		pageID uint32
@@ -64,7 +64,12 @@ func (k *KnucklesMap) Set(key []byte, value []byte, version int) {
 	k.walAPI.SetOperationWAL(hash, key, value)
 
 	_, _, currentVersion := k.Get(key)
-	k.bufferToInfect.WriteInfection(consensus.NewEntry(key, value, currentVersion))
+
+	// if the write is sent by a client set the entry into the 
+	// infection buffer.
+	if infectionFlag {
+		k.bufferToInfect.WriteInfection(consensus.NewEntry(key, value, currentVersion))
+	}
 }
 
 /**
