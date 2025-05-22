@@ -33,3 +33,12 @@ This greatly simplified the implementation of the logger since, by using an offs
 
 The WAL was implemented without global mutexes, as they can create bottlenecks and introduce latency in request execution. Instead, a mutual exclusion mechanism is implemented using the Singular Update Queue pattern.
 The recovery phase does not rely on distributed snapshots aimed at recovering a global view of the state. This is because KnucklesDB is an eventually consistent database, and it is therefore legitimate for the state to present inconsistencies upon reboot. This design choice simplifies the recovery phase, making it faster.
+
+## How To Run
+```
+go build server.go
+```
+
+```
+./server -h=<IP Address> -p=<Port>
+```
