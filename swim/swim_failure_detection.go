@@ -136,7 +136,6 @@ func (s *SWIMFailureDetector) sendPing(nodeHost string, nodeListenPort int) {
 		s.gossip.SpreadMembershipListUpdates(s.manager.SetFanoutList(), NewNode(nodeHost, nodeListenPort, STATUS_SUSPICIOUS))
 
 		s.logger.ReportInfo(fmt.Sprintf("%s - %s is SUSPICIOUS", nodeHost, strconv.Itoa(nodeListenPort)))
-		// TODO -> start a gossip cycle
 		go s.piggyBack(joined)
 		s.logger.ReportInfo("Sending Help Request to K Nodes")
 	}
