@@ -45,7 +45,6 @@ func NewClientSet(address string, sleepTime time.Duration) *ClientSet {
 func (c *ClientSet) Set(key, value []byte) error {
 	var response ServerMessages
 
-	fmt.Printf("yooo")
 
 	if okKey := c.IsEmpty(key); okKey {
 		return errors.New("The Key is Empty!")
@@ -55,13 +54,13 @@ func (c *ClientSet) Set(key, value []byte) error {
 		return errors.New("The Value is Empty!")
 	}
 
+	fmt.Printf("Writing: Key -> %s Value -> %s \n", string(key), string(value))
+
 	jsonValue, _ := json.Marshal(map[string]any{
 		"type": "set",
 		"key": key,
 		"value": value,
 	})
-
-	fmt.Println(string(jsonValue))
 
 	var err error
 	for {

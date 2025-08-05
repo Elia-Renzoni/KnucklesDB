@@ -37,7 +37,7 @@ func main() {
 			return
 		}
 
-		conn, err := net.Dial("tcp", "127.0.0.1:6060")
+		conn, err := net.Dial("tcp", "127.0.0.1:5050")
 		if err != nil {
 			return
 		}
@@ -46,9 +46,10 @@ func main() {
 
 		reply := make([]byte, 2024)
 		n, _ := conn.Read(reply)
+		fmt.Printf("Server Response: %s \n", string(reply))
 		json.Unmarshal(reply[:n], &serverResponse)
 
-		fmt.Println(serverResponse)
+		//fmt.Println(serverResponse.Ack)
 
 		conn.Close()
 
